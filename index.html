@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Simple Trader - AI Trading Terminal Mini App</title>
+  <script src="telegram-web-app.js"></script>
+  <style>
+    /* ==========================================================================
+       🎨 ТЕМЫ ОФОРМЛЕНИЯ
+       ========================================================================== */
+    :root[data-theme="dark"] {
+      --bg-color: #0F172A;
+      --card-bg: #1E293B;
+      --accent-color: #2563EB;
+      --text-color: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border-color: #334155;
+      --success-color: #10B981;
+      --danger-color: #EF4444;
+      --input-bg: rgba(0, 0, 0, 0.25);
+    }
+
+    :root[data-theme="light"] {
+      --bg-color: #F1F5F9;
+      --card-bg: #FFFFFF;
+      --accent-color: #2563EB;
+      --text-color: #0F172A;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+      --success-color: #059669;
+      --danger-color: #DC2626;
+      --input-bg: #F8FAFC;
+    }
+
+    :root[data-theme="emerald"] {
+      --bg-color: #064E3B;
+      --card-bg: #047857;
+      --accent-color: #10B981;
+      --text-color: #ECFDF5;
+      --text-muted: #A7F3D0;
+      --border-color: #065F46;
+      --success-color: #34D399;
+      --danger-color: #F87171;
+      --input-bg: rgba(0, 0, 0, 0.2);
+    }
+
+    :root[data-theme="bitcoin"] {
+      --bg-color: #16120B;
+      --card-bg: #261E12;
+      --accent-color: #F7931A;
+      --text-color: #FFF8EE;
+      --text-muted: #C4A882;
+      --border-color: #44351B;
+      --success-color: #22C55E;
+      --danger-color: #EF4444;
+      --input-bg: rgba(0, 0, 0, 0.35);
+    }
+
+    :root[data-theme="candlestick"] {
+      --bg-color: #0B0E14;
+      --card-bg: #151A23;
+      --accent-color: #00E676;
+      --text-color: #E0E6ED;
+      --text-muted: #788B9C;
+      --border-color: #232D3F;
+      --success-color: #00E676;
+      --danger-color: #FF5252;
+      --input-bg: rgba(0, 0, 0, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding-bottom: 84px;
+      padding-top: env(safe-area-inset-top);
+      min-height: 100vh;
+      transition: background-color 0.25s ease, color 0.25s ease;
+      overflow-x: hidden;
+    }
+
+    /* 🏆 ШАПКА */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563EB, #1D4ED8);
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    .streak-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid #F59E0B;
+      padding: 5px 10px;
+      border-radius: 9px;
+      color: #F59E0B;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .streak-badge:active { transform: scale(0.94); }
+
+    .settings-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.15s ease;
+    }
+    .settings-btn:active { transform: scale(0.92); }
+
+    /* 📱 ВКЛАДКИ И КАРТОЧКИ */
+    .tab-content {
+      display: none;
+      padding: 14px;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    .tab-content.active { display: block; }
+
+    .duo-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .duo-btn {
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 0.1s ease, opacity 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      color: #FFF;
+      background: var(--accent-color);
+    }
+    .duo-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+    .duo-btn-secondary {
+      background: transparent;
+      color: var(--text-color);
+      border: 1px solid var(--border-color);
+    }
+
+    .duo-btn-success { background: var(--success-color); color: #FFF; }
+    .duo-btn-danger { background: var(--danger-color); color: #FFF; }
+
+    .segment-picker {
+      display: flex;
+      background: var(--input-bg);
+      padding: 3px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      margin-bottom: 12px;
+      gap: 4px;
+    }
+
+    .segment-btn {
+      flex: 1;
+      min-height: 36px;
+      padding: 6px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .segment-btn.active {
+      background: var(--card-bg);
+      color: var(--text-color);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      border: 1px solid var(--border-color);
+    }
+
+    .currency-selector { display: flex; gap: 6px; margin-bottom: 12px; }
+    .curr-btn {
+      flex: 1; padding: 8px; background: var(--input-bg);
+      border: 1px solid var(--border-color); border-radius: 8px;
+      color: var(--text-muted); font-size: 12px; font-weight: 800; text-align: center; cursor: pointer;
+    }
+    .curr-btn.active { background: var(--accent-color); color: #FFF; border-color: var(--accent-color); }
+
+    .input-group { margin-bottom: 12px; }
+    .input-label {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      display: block;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .duo-input {
+      width: 100%;
+      min-height: 42px;
+      padding: 9px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-color);
+      font-weight: 700;
+      font-size: 14px;
+      outline: none;
+    }
+    .duo-input:focus { border-color: var(--accent-color); }
+
+    /* 📊 PnL ГИСТОГРАММА */
+    .pnl-chart {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      height: 110px;
+      padding: 10px 4px 0 4px;
+      margin-top: 8px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .pnl-bar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+    .pnl-bar { width: 14px; border-radius: 4px; transition: height 0.3s ease, background 0.3s ease; }
+    .pnl-bar.positive { background: var(--success-color); }
+    .pnl-bar.negative { background: var(--danger-color); }
+    .pnl-bar.today { border: 2px solid var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
+    .pnl-day { font-size: 10px; font-weight: 700; color: var(--text-muted); }
+    .pnl-day.today-label { color: var(--accent-color); font-weight: 900; }
+
+    /* 📂 АККОРДЕОНЫ И АКТИВЫ */
+    .accordion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .accordion-content {
+      display: none;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      padding: 6px 0 10px 0;
+    }
+    .accordion-content.open { display: grid; }
+
+    .asset-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .asset-card.selected {
+      border-color: var(--success-color);
+      background: rgba(16, 185, 129, 0.12);
+    }
+    .asset-card:active { transform: scale(0.97); }
+
+    .asset-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+    .asset-name { font-size: 12px; font-weight: 700; }
+
+    .status-badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    .status-badge.active { background: rgba(16, 185, 129, 0.2); color: var(--success-color); border: 1px solid var(--success-color); }
+    .status-badge.inactive { background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid var(--border-color); }
+
+    /* 🌐 ЯЗЫКОВАЯ СЕТКА */
+    .lang-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--input-bg);
+      margin-bottom: 12px;
+    }
+
+    .lang-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      background: var(--card-bg);
+      color: var(--text-color);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .lang-item:active { transform: scale(0.97); }
+    .lang-item.selected {
+      border-color: var(--accent-color);
+      background: rgba(37, 99, 235, 0.15);
+      color: var(--text-color);
+    }
+    .lang-flag { font-size: 16px; }
+
+    .scanner-live-info {
+      background: var(--input-bg);
+      border: 1px dashed var(--border-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+    }
+    .calc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .calc-row:last-child { margin-bottom: 0; }
+
+    .tg-notice-banner {
+      display: none;
+      background: rgba(37, 99, 235, 0.12);
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      animation: fadeIn 0.2s ease;
+    }
+    .tg-notice-banner.visible { display: block; }
+
+    /* 🤖 ИИ-ЧАТ */
+    .chat-messages {
+      height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px 0;
+    }
+    .chat-msg {
+      max-width: 86%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.4;
+      font-weight: 600;
+    }
+    .chat-msg.user {
+      background: var(--accent-color);
+      color: #FFF;
+      align-self: flex-end;
+      border-bottom-right-radius: 2px;
+    }
+    .chat-msg.ai {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      align-self: flex-start;
+      border-bottom-left-radius: 2px;
+    }
+
+    .trial-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--danger-color);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    /* 🧭 НИЖНЯЯ НАВИГАЦИЯ */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      padding-bottom: env(safe-area-inset-bottom);
+      background: var(--card-bg);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 25%;
+    }
+    .nav-item.active { color: var(--accent-color); }
+    .nav-item .icon { font-size: 20px; }
+
+    /* 🪟 МОДАЛЬНЫЕ ОКНА */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      padding: 16px;
+    }
+    .modal-overlay.active { display: flex; animation: fadeIn 0.15s ease; }
+
+    .modal-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 360px;
+      padding: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .modal-title { font-size: 16px; font-weight: 800; }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+      text-align: center;
+    }
+    .cal-day-name { font-size: 11px; font-weight: 800; color: var(--text-muted); padding-bottom: 4px; }
+    .cal-date-cell {
+      padding: 8px 0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      background: var(--input-bg);
+      color: var(--text-muted);
+    }
+    .cal-date-cell.active-day { background: var(--success-color); color: #FFF; font-weight: 900; }
+    .cal-date-cell.today-cell { border: 2px solid var(--accent-color); color: var(--text-color); font-weight: 900; }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  </style>
+</head>
+<body>
+
+  <!-- 🏆 ШАПКА -->
+  <div class="top-bar">
+    <div class="user-info">
+      <div class="avatar">ST</div>
+      <span id="txtUserRole" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; font-size: 15px; letter-spacing: 0.2px;">Simple Trader</span>
+    </div>
+    
+    <div class="header-actions">
+      <div class="streak-badge" onclick="openStreakModal()">
+        <span>🔥</span> <b id="streakCountHeader">1 дн.</b>
+      </div>
+      <button class="settings-btn" onclick="openSettingsModal()">⚙️</button>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- 📊 ВКЛАДКА 1: РАЗДЕЛЬНАЯ СТАТИСТИКА И ТОЧНЫЕ КАЛЬКУЛЯТОРЫ -->
+  <!-- ================================================================= -->
+  <div id="tab1" class="tab-content active">
+    
+    <div class="currency-selector">
+      <button class="curr-btn active" onclick="setTab1Currency('USD', this)">$ USD</button>
+      <button class="curr-btn" onclick="setTab1Currency('RUB', this)">₽ RUB</button>
+      <button class="curr-btn" onclick="setTab1Currency('EUR', this)">€ EUR</button>
+    </div>
+
+    <div class="segment-picker">
+      <button class="segment-btn active" id="statModeForexBtn" onclick="switchStatSection('forex', this)">📈 Статистика Форекс</button>
+      <button class="segment-btn" id="statModeBinaryBtn" onclick="switchStatSection('binary', this)">🎲 Статистика Опционов</button>
+    </div>
+
+    <div class="duo-card" style="display: flex; justify-content: space-around; text-align: center;">
+      <div>
+        <div style="font-size: 22px; font-weight: 800; color: var(--success-color);" id="statWinRate">0%</div>
+        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;" id="lblWinRate">Win Rate</div>
+      </div>
+      <div style="border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); padding: 0 14px;">
+        <div style="font-size: 22px; font-weight: 800; color: var(--accent-color);" id="statTotalSignals">0</div>
+        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;" id="lblTotalTrades">Сделок</div>
+      </div>
+      <div>
+        <div style="font-size: 22px; font-weight: 800; color: var(--success-color);" id="statProfit">$0.00</div>
+        <div style="font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;" id="lblProfitPnL">Профит PnL</div>
+      </div>
+    </div>
+
+    <div class="duo-card">
+      <h4 style="margin-bottom: 10px; font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--text-muted);" id="tradePanelTitle">➕ / ➖ Добавить сделку (Форекс)</h4>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+        <div class="input-group" style="flex:1; margin-bottom:0;">
+          <label class="input-label" id="lblTradeResult">Результат сделки (<span class="tab1CurrSym">$</span>)</label>
+          <input type="number" id="tradeAmountInput" class="duo-input" value="20">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="duo-btn duo-btn-success" style="flex: 1;" onclick="addTradeResult(true)" id="btnWinTrade">
+          🟩 + Плюс (Win)
+        </button>
+        <button class="duo-btn duo-btn-danger" style="flex: 1;" onclick="addTradeResult(false)" id="btnLossTrade">
+          🟥 - Минус (Loss)
+        </button>
+      </div>
+    </div>
+
+    <div class="duo-card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h4 style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--text-muted);" id="weekChartTitle">📊 Динамика PnL Форекс (Неделя)</h4>
+        <span style="font-size: 11px; color: var(--success-color); font-weight: 800;" id="weekProfitBadge">$0.00</span>
+      </div>
+      <div class="pnl-chart" id="pnlWeekChart"></div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+      <button class="duo-btn duo-btn-secondary" style="width: auto; min-height: 34px; padding: 6px 12px; font-size: 12px;" onclick="resetStats()" id="btnResetStats">
+        🔄 Сбросить статистику
+      </button>
+    </div>
+
+    <!-- 📐 КАЛЬКУЛЯТОРЫ РИСКА -->
+    <div class="duo-card">
+      <h3 style="margin-bottom: 12px; font-size: 15px; font-weight: 800;" id="txtCalcHeading">📐 Точный калькулятор риска</h3>
+      
+      <div class="segment-picker">
+        <button class="segment-btn active" onclick="switchCalcMode('forex', this)" id="btnCalcForexMode">📈 Калькулятор Форекс</button>
+        <button class="segment-btn" onclick="switchCalcMode('binary', this)" id="btnCalcBinaryMode">🎲 Калькулятор Опционов</button>
+      </div>
+
+      <!-- 📈 КАЛЬКУЛЯТОР ФОРЕКС -->
+      <div id="calcForexBlock">
+        <div style="display: flex; gap: 10px;">
+          <div class="input-group" style="flex:1;">
+            <label class="input-label" id="lblForexDepo">Депозит (<span class="tab1CurrSym">$</span>)</label>
+            <input type="number" id="calcForexDepo" class="duo-input" value="1000" oninput="updateRiskCalc()">
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label class="input-label" id="lblForexRiskPct">Риск на сделку (%)</label>
+            <input type="number" id="calcForexRisk" class="duo-input" value="2" oninput="updateRiskCalc()">
+          </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <div class="input-group" style="flex:1;">
+            <label class="input-label" id="lblForexSL">Stop Loss (пункты)</label>
+            <input type="number" id="calcForexSL" class="duo-input" value="20" oninput="updateRiskCalc()">
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label class="input-label" id="lblForexTP">Take Profit (пункты)</label>
+            <input type="number" id="calcForexTP" class="duo-input" value="40" oninput="updateRiskCalc()">
+          </div>
+        </div>
+
+        <div style="background: var(--input-bg); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 13px; line-height: 1.65;">
+          <div class="calc-row">
+            <span id="lblForexRiskVal">🔴 Максимальный риск в сделке:</span>
+            <b style="color: var(--danger-color);" id="resForexRiskVal">$20.00</b>
+          </div>
+          <div class="calc-row">
+            <span id="lblForexLot">🟩 Рекомендуемый объем позиций:</span>
+            <b style="color: var(--success-color);" id="resForexLot">0.10 лота</b>
+          </div>
+          <div class="calc-row">
+            <span id="lblForexTPVal">📈 Ожидаемый профит (по TP):</span>
+            <b style="color: var(--success-color);" id="resForexTPVal">$40.00</b>
+          </div>
+          <div class="calc-row">
+            <span id="lblForexRR">⚖️ Соотношение Risk / Reward:</span>
+            <b style="color: var(--accent-color);" id="resForexRR">1 : 2.0</b>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🎲 КАЛЬКУЛЯТОР ВАЛЮТНЫХ ОПЦИОНОВ -->
+      <div id="calcBinaryBlock" style="display: none;">
+        <div style="display: flex; gap: 10px;">
+          <div class="input-group" style="flex:1;">
+            <label class="input-label" id="lblBinDepo">Депозит (<span class="tab1CurrSym">$</span>)</label>
+            <input type="number" id="calcBinDepo" class="duo-input" value="500" oninput="updateRiskCalc()">
+          </div>
+          <div class="input-group" style="flex:1;">
+            <label class="input-label" id="lblBinStakePct">Сумма 1-й сделки (%)</label>
+            <input type="number" id="calcBinRisk" class="duo-input" value="3" oninput="updateRiskCalc()">
+          </div>
+        </div>
+        <div class="input-group">
+          <label class="input-label" id="lblBinPayoutPct">Выплата брокера по активу (%)</label>
+          <input type="number" id="calcBinPayout" class="duo-input" value="85" oninput="updateRiskCalc()">
+        </div>
+
+        <div style="background: var(--input-bg); padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); font-size: 13px; line-height: 1.65;">
+          <div class="calc-row">
+            <span id="lblBinStake">💵 Сумма 1-й сделки (Ставка):</span>
+            <b style="color: var(--success-color);" id="resBinStake">$15.00</b>
+          </div>
+          <div class="calc-row">
+            <span id="lblBinWinProfit">🟢 Чистый профит при Win:</span>
+            <b style="color: var(--success-color);" id="resBinWinProfit">$12.75</b>
+          </div>
+          <div class="calc-row">
+            <span id="lblBinStep1">🔄 Страховка Мартингейл (Колено 1):</span>
+            <b style="color: var(--accent-color);" id="resBinStep1">$32.65</b>
+          </div>
+          <div class="calc-row">
+            <span id="lblBinStopDay">🛑 Дневной лимит Stop-Day (15%):</span>
+            <b style="color: var(--danger-color);" id="resBinStopDay">$75.00</b>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- 📈 ВКЛАДКА 2: ИИ-СКАНЕРЫ -->
+  <!-- ================================================================= -->
+  <div id="tab2" class="tab-content">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <span style="font-size: 11px; font-weight: 800; color: var(--text-muted);" id="lblSignalCurrency">Валюта счета сигналов:</span>
+      <div class="currency-selector" style="margin-bottom:0; width: 180px;">
+        <button class="curr-btn active" onclick="setTab2Currency('USD', this)">$ USD</button>
+        <button class="curr-btn" onclick="setTab2Currency('RUB', this)">₽ RUB</button>
+        <button class="curr-btn" onclick="setTab2Currency('EUR', this)">€ EUR</button>
+      </div>
+    </div>
+
+    <!-- 📈 СКАНЕР 1: ФОРЕКС -->
+    <div class="duo-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h4 style="font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--accent-color);" id="titleForexScanner">📈 ИИ-Сканер Форекс</h4>
+        <span id="forexStatusBadge" class="status-badge inactive">ВЫКЛ</span>
+      </div>
+      
+      <div style="display: flex; gap: 10px;">
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanForexDepo">Баланс Форекс (<span class="tab2CurrSym">$</span>)</label>
+          <input type="number" id="forexBalanceInput" class="duo-input" value="1000" oninput="updateScannerState()">
+        </div>
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanForexRisk">Риск (%)</label>
+          <input type="number" class="duo-input" value="2">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanForexTF">Таймфрейм</label>
+          <select class="duo-input">
+            <option value="5m">5m</option>
+            <option value="15m" selected>15m</option>
+            <option value="30m">30m</option>
+            <option value="1h">1h</option>
+            <option value="4h">4h</option>
+          </select>
+        </div>
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanForexWinrate">🎯 Мин. % одобрения ИИ</label>
+          <select class="duo-input" id="scanForexWinrateSelect">
+            <option value="70" id="optFWin70">70% (Высокая частота)</option>
+            <option value="75" id="optFWin75" selected>75% (Оптимальный)</option>
+            <option value="80" id="optFWin80">80% (Точные)</option>
+            <option value="85" id="optFWin85">85% (Строгий ИИ)</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanForexInterval">⏱️ Интервал сканирования</label>
+          <select class="duo-input" id="scanForexInterval">
+            <option value="5m">5m</option>
+            <option value="15m" selected>15m</option>
+            <option value="30m">30m</option>
+            <option value="1h">1h</option>
+          </select>
+        </div>
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanForexMaxSignals">📊 Макс. сигналов в интервал</label>
+          <select class="duo-input" id="scanForexMaxDaily">
+            <option value="1" id="optF1">1 сигнал / интервал</option>
+            <option value="2" id="optF2">2 сигнала / интервал</option>
+            <option value="3" id="optF3" selected>3 сигнала / интервал</option>
+            <option value="5" id="optF5">5 сигналов / интервал</option>
+            <option value="0" id="optF0">Без лимита</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="scanner-live-info">
+        <div class="calc-row">
+          <span id="lblForexBalanceStatusText">💼 Статус баланса:</span>
+          <b id="forexBalanceStatus" style="color: var(--success-color);">1 000 $ (Достаточно)</b>
+        </div>
+        <div class="calc-row">
+          <span id="lblForexSelectedAssetsText">🎯 Выбранные активы:</span>
+          <b id="forexSelectedAssetsCount" style="color: var(--accent-color);">0 активов</b>
+        </div>
+      </div>
+
+      <button class="duo-btn" id="btnToggleForexScanner" onclick="toggleForexScanner()">⚡ Включить Сканер Форекс</button>
+      
+      <div id="forexTgNotice" class="tg-notice-banner">
+        📲 Уведомления и сигналы придут в личные сообщения в Telegram!
+      </div>
+    </div>
+
+    <!-- 🎲 СКАНЕР 2: ВАЛЮТНЫЕ ОПЦИОНЫ -->
+    <div class="duo-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h4 style="font-size: 14px; font-weight: 800; text-transform: uppercase; color: var(--success-color);" id="titleBinaryScanner">🎲 ИИ-Сканер Валютных Опционов</h4>
+        <span id="binaryStatusBadge" class="status-badge inactive">ВЫКЛ</span>
+      </div>
+      
+      <div style="display: flex; gap: 10px;">
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanBinDepo">Баланс Опционов (<span class="tab2CurrSym">$</span>)</label>
+          <input type="number" id="binaryBalanceInput" class="duo-input" value="500" oninput="updateScannerState()">
+        </div>
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanBinExp">Время экспирации</label>
+          <select class="duo-input" id="scanBinExp">
+            <option value="1m">1m</option>
+            <option value="2m">2m</option>
+            <option value="3m" selected>3m</option>
+            <option value="5m">5m</option>
+            <option value="15m">15m</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label class="input-label" id="lblScanBinWinrate">🎯 Минимальный % одобрения ИИ (Точность)</label>
+        <select class="duo-input" id="scanBinWinrateSelect">
+          <option value="70" id="optBWin70">70% (Высокая частота)</option>
+          <option value="75" id="optBWin75" selected>75% (Оптимальный баланс)</option>
+          <option value="80" id="optBWin80">80% (Повышенная точность)</option>
+          <option value="85" id="optBWin85">85% (Строгий фильтр ИИ)</option>
+        </select>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanBinInterval">⏱️ Интервал сканирования</label>
+          <select class="duo-input" id="scanBinInterval">
+            <option value="1m">1m</option>
+            <option value="3m">3m</option>
+            <option value="5m" selected>5m</option>
+            <option value="15m">15m</option>
+          </select>
+        </div>
+        <div class="input-group" style="flex:1;">
+          <label class="input-label" id="lblScanBinMaxSignals">📊 Макс. сигналов в интервал</label>
+          <select class="duo-input" id="scanBinMaxDaily">
+            <option value="1" id="optB1">1 сигнал / интервал</option>
+            <option value="2" id="optB2">2 сигнала / интервал</option>
+            <option value="3" id="optB3" selected>3 сигнала / интервал</option>
+            <option value="5" id="optB5">5 сигналов / интервал</option>
+            <option value="0" id="optB0">Без лимита</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="scanner-live-info">
+        <div class="calc-row">
+          <span id="lblBinaryBalanceStatusText">💼 Статус баланса:</span>
+          <b id="binaryBalanceStatus" style="color: var(--success-color);">500 $ (Достаточно)</b>
+        </div>
+        <div class="calc-row">
+          <span id="lblBinarySelectedAssetsText">🎯 Выбранные активы:</span>
+          <b id="binarySelectedAssetsCount" style="color: var(--success-color);">0 активов</b>
+        </div>
+      </div>
+
+      <button class="duo-btn duo-btn-success" id="btnToggleBinaryScanner" onclick="toggleBinaryScanner()">🎲 Включить Сканер Опционов</button>
+      
+      <div id="binaryTgNotice" class="tg-notice-banner">
+        📲 Уведомления и сигналы придут в личные сообщения в Telegram!
+      </div>
+    </div>
+
+    <!-- 🌐 ВЫБОР АКТИВОВ -->
+    <div class="duo-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h4 style="font-size: 13px; font-weight: 800; text-transform: uppercase; color: var(--text-muted);" id="titleAssetSelection">Выбор активов для сканирования</h4>
+        <span style="font-size: 11px; font-weight: 800; color: var(--accent-color);" id="lblActivePairsTotal">Отмечено: 0 активов</span>
+      </div>
+      
+      <div class="accordion-header" onclick="toggleAccordion('accForex', this)">
+        <span id="accForexTitle">💱 Самые популярные валютные пары</span>
+        <span class="acc-arrow" id="accForexArrow">▾</span>
+      </div>
+      <div id="accForex" class="accordion-content">
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇪🇺</div><span class="asset-name">EUR/USD</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇬🇧</div><span class="asset-name">GBP/USD</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇯🇵</div><span class="asset-name">USD/JPY</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇦🇺</div><span class="asset-name">AUD/USD</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇨🇦</div><span class="asset-name">USD/CAD</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇨🇭</div><span class="asset-name">USD/CHF</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇳🇿</div><span class="asset-name">NZD/USD</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇪🇺</div><span class="asset-name">EUR/GBP</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇪🇺</div><span class="asset-name">EUR/JPY</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇬🇧</div><span class="asset-name">GBP/JPY</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇦🇺</div><span class="asset-name">AUD/JPY</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🇪🇺</div><span class="asset-name">EUR/CAD</span></div>
+      </div>
+
+      <div class="accordion-header" onclick="toggleAccordion('accCrypto', this)">
+        <span id="accCryptoTitle">🪙 Криптовалюта</span>
+        <span class="acc-arrow" id="accCryptoArrow">▾</span>
+      </div>
+      <div id="accCrypto" class="accordion-content">
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">₿</div><span class="asset-name">Bitcoin (BTC)</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">💎</div><span class="asset-name">Ethereum (ETH)</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">⚡</div><span class="asset-name">Solana (SOL)</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🪙</div><span class="asset-name">Ripple (XRP)</span></div>
+      </div>
+
+      <div class="accordion-header" onclick="toggleAccordion('accStocks', this)">
+        <span id="accStocksTitle">📈 Акции компаний</span>
+        <span class="acc-arrow" id="accStocksArrow">▾</span>
+      </div>
+      <div id="accStocks" class="accordion-content">
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🍏</div><span class="asset-name">Apple</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">⚡</div><span class="asset-name">Tesla</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🟢</div><span class="asset-name">Nvidia</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">📦</div><span class="asset-name">Amazon</span></div>
+      </div>
+
+      <div class="accordion-header" onclick="toggleAccordion('accCommodities', this)">
+        <span id="accCommoditiesTitle">🛢️ Сырьевые товары</span>
+        <span class="acc-arrow" id="accCommoditiesArrow">▾</span>
+      </div>
+      <div id="accCommodities" class="accordion-content">
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🥇</div><span class="asset-name">Gold (XAU)</span></div>
+        <div class="asset-card" onclick="toggleAssetCard(this)"><div class="asset-icon">🛢️</div><span class="asset-name">Brent Oil</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- 💳 ВКЛАДКА 3: ТАРИФЫ И ПОДПИСКИ -->
+  <!-- ================================================================= -->
+  <div id="tab3" class="tab-content">
+    <div class="trial-banner">
+      <div>
+        <div style="font-size: 13px; font-weight: 800; color: var(--danger-color);" id="txtTrialPeriodHeading">⏱️ Тестовый период (1 день)</div>
+        <div style="font-size: 12px; color: var(--text-muted); font-weight: 600;" id="txtTrialTimeLeft">До окончания: <b>23 ч. 59 мин.</b></div>
+      </div>
+    </div>
+
+    <div class="duo-card">
+      <h3 style="margin-bottom: 12px; font-size: 15px; font-weight: 800;" id="txtSubHeading">💳 Подписка и доступ</h3>
+      <div class="segment-picker">
+        <button class="segment-btn active" onclick="setSubMode('forex', this)" id="btnSubForex">📈 Форекс</button>
+        <button class="segment-btn" onclick="setSubMode('binary', this)" id="btnSubBinary">🎲 Валютные Опционы</button>
+        <button class="segment-btn" onclick="setSubMode('multi', this)" id="btnSubMulti">⚡ МУЛЬТИ</button>
+      </div>
+
+      <select id="subPeriodSelect" class="duo-input" onchange="updatePriceDisplay()" style="margin-bottom: 14px;">
+        <option value="7d" id="subOpt7d">7 Дней</option>
+        <option value="1m" id="subOpt1m" selected>1 Месяц</option>
+        <option value="3m" id="subOpt3m">3 Месяца</option>
+        <option value="6m" id="subOpt6m">6 Месяцев</option>
+        <option value="12m" id="subOpt12m">12 Месяцев (1 Год)</option>
+      </select>
+
+      <div style="text-align: center; margin: 16px 0;">
+        <div style="font-size: 30px; font-weight: 800; color: var(--text-color);" id="displayPrice">2 490 ₽</div>
+      </div>
+
+      <button class="duo-btn" onclick="buySubscription()" id="btnBuySub">Оформить подписку</button>
+    </div>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- 🤖 ВКЛАДКА 4: ИИ-ЧАТ -->
+  <!-- ================================================================= -->
+  <div id="tab4" class="tab-content">
+    <div class="duo-card">
+      <div class="chat-messages" id="chatMessages">
+        <!-- Чистый чат без начальных сообщений -->
+      </div>
+      <div style="display: flex; gap: 8px; margin-top: 12px;">
+        <input type="text" id="chatInput" class="duo-input" placeholder="Введите ваш запрос..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+        <button class="duo-btn" style="width: 46px; min-height: 44px; padding: 0;" onclick="sendChatMessage()">➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🧭 НИЖНЯЯ НАВИГАЦИЯ -->
+  <div class="nav-bar">
+    <button class="nav-item active" onclick="switchTab('tab1', this)"><span class="icon">📊</span><span id="navTab1">Статистика</span></button>
+    <button class="nav-item" onclick="switchTab('tab2', this)"><span class="icon">📈</span><span id="navTab2">Сканер</span></button>
+    <button class="nav-item" onclick="switchTab('tab3', this)"><span class="icon">💳</span><span id="navTab3">Тарифы</span></button>
+    <button class="nav-item" onclick="switchTab('tab4', this)"><span class="icon">🤖</span><span id="navTab4">ИИ-Чат</span></button>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- ⚙️ МОДАЛЬНОЕ ОКНО НАСТРОЕК -->
+  <!-- ================================================================= -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="txtSettingsTitle">⚙️ Настройки</div>
+      </div>
+
+      <!-- ВЫБОР ТЕМЫ -->
+      <div class="input-group">
+        <label class="input-label" id="lblThemeSelect">🎨 Тема оформления</label>
+        <select id="themeSelect" class="duo-input" onchange="changeAppTheme(this.value)">
+          <option value="dark" id="themeOptDark" selected>🌑 Тёмная (Dark Tech)</option>
+          <option value="light" id="themeOptLight">☀️ Светлая (Clean Light)</option>
+          <option value="emerald" id="themeOptEmerald">💚 Изумрудная (Emerald Classic)</option>
+          <option value="bitcoin" id="themeOptBitcoin">🪙 Биткоин (Bitcoin Gold)</option>
+          <option value="candlestick" id="themeOptCandlestick">📈 Японские свечи (Candlestick Chart)</option>
+        </select>
+      </div>
+
+      <!-- ВЫБОР ЯЗЫКА С ФЛАГАМИ (12 ЯЗЫКОВ) -->
+      <div class="input-group" style="margin-bottom: 6px;">
+        <label class="input-label" id="lblLangSelect">🌐 Язык интерфейса</label>
+      </div>
+      <div class="lang-grid">
+        <div class="lang-item selected" onclick="selectLanguage('ru', this)"><span class="lang-flag">🇷🇺</span> <span>Русский (RU)</span></div>
+        <div class="lang-item" onclick="selectLanguage('en', this)"><span class="lang-flag">🇬🇧</span> <span>English (EN)</span></div>
+        <div class="lang-item" onclick="selectLanguage('zh', this)"><span class="lang-flag">🇨🇳</span> <span>中文 (CN)</span></div>
+        <div class="lang-item" onclick="selectLanguage('kk', this)"><span class="lang-flag">🇰🇿</span> <span>Қазақша (KZ)</span></div>
+        <div class="lang-item" onclick="selectLanguage('de', this)"><span class="lang-flag">🇩🇪</span> <span>Deutsch (DE)</span></div>
+        <div class="lang-item" onclick="selectLanguage('es', this)"><span class="lang-flag">🇪🇸</span> <span>Español (ES)</span></div>
+        <div class="lang-item" onclick="selectLanguage('uz', this)"><span class="lang-flag">🇺🇿</span> <span>Oʻzbekcha (UZ)</span></div>
+        <div class="lang-item" onclick="selectLanguage('ky', this)"><span class="lang-flag">🇰🇬</span> <span>Кыргызча (KG)</span></div>
+        <div class="lang-item" onclick="selectLanguage('tk', this)"><span class="lang-flag">🇹🇲</span> <span>Türkmençe (TM)</span></div>
+        <div class="lang-item" onclick="selectLanguage('tg', this)"><span class="lang-flag">🇹🇯</span> <span>Тоҷикӣ (TJ)</span></div>
+        <div class="lang-item" onclick="selectLanguage('az', this)"><span class="lang-flag">🇦🇿</span> <span>Azərbaycan (AZ)</span></div>
+        <div class="lang-item" onclick="selectLanguage('hy', this)"><span class="lang-flag">🇦🇲</span> <span>Հայերեն (AM)</span></div>
+      </div>
+
+      <!-- КРАСНАЯ КНОПКА ЗАКРЫТЬ -->
+      <div style="margin-top: 14px;">
+        <button class="duo-btn duo-btn-danger" style="min-height: 42px; font-size: 14px;" onclick="closeSettingsModal()" id="btnCloseSettings">
+          🚪 Закрыть
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🪟 ВАШ СТРИК -->
+  <div class="modal-overlay" id="streakModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title" id="txtStreakTitle">🔥 Ваш стрик</div>
+      </div>
+      <div style="text-align: center; margin-bottom: 12px;">
+        <div style="font-size: 32px; font-weight: 900; color: #F59E0B;" id="txtStreakValue">🔥 1 День</div>
+        <div style="font-size: 12px; color: var(--text-muted);" id="txtStreakDesc">Первый день активности в этом месяце</div>
+      </div>
+      <div class="calendar-grid" id="calendarDayNamesHeader">
+        <div class="cal-day-name">ПН</div><div class="cal-day-name">ВТ</div><div class="cal-day-name">СР</div><div class="cal-day-name">ЧТ</div><div class="cal-day-name">ПТ</div><div class="cal-day-name">СБ</div><div class="cal-day-name">ВС</div>
+      </div>
+      <div class="calendar-grid" id="monthCalendarGrid"></div>
+      <button class="duo-btn duo-btn-danger" style="margin-top: 14px; min-height: 42px;" onclick="closeStreakModal()" id="btnCloseStreak">🚪 Закрыть</button>
+    </div>
+  </div>
+
+  <!-- 💻 JAVASCRIPT ЛОГИКА -->
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.expand(); }
+
+    let tab1Currency = 'USD';
+    let tab2Currency = 'USD';
+    let currentStatMode = 'forex';
+    let currentSubMode = 'forex';
+    let currentLang = 'ru';
+
+    let isForexScannerActive = false;
+    let isBinaryScannerActive = false;
+
+    let forexStats = { wins: 0, losses: 0, netProfit: 0.0, weeklyPnL: [0, 0, 0, 0, 0, 0, 0] };
+    let binaryStats = { wins: 0, losses: 0, netProfit: 0.0, weeklyPnL: [0, 0, 0, 0, 0, 0, 0] };
+
+    const PRICE_MATRIX = {
+      forex:  { '7d': '990 ₽', '1m': '2 490 ₽', '3m': '5 990 ₽', '6m': '9 990 ₽', '12m': '14 990 ₽' },
+      binary: { '7d': '990 ₽', '1m': '2 490 ₽', '3m': '5 990 ₽', '6m': '9 990 ₽', '12m': '14 990 ₽' },
+      multi:  { '7d': '1 490 ₽', '1m': '3 490 ₽', '3m': '8 490 ₽', '6m': '14 490 ₽', '12m': '22 990 ₽' }
+    };
+
+    /* 🌐 ПЕРЕВОДЫ НА 12 ЯЗЫКОВ */
+    const I18N = {
+      ru: {
+        navTab1: "Статистика", navTab2: "Сканер", navTab3: "Тарифы", navTab4: "ИИ-Чат",
+        settingsTitle: "⚙️ Настройки", themeLabel: "🎨 Тема оформления", langLabel: "🌐 Язык интерфейса", closeBtn: "🚪 Закрыть",
+        statForexBtn: "📈 Статистика Форекс", statBinaryBtn: "🎲 Статистика Опционов",
+        winRate: "Win Rate", trades: "Сделок", profitPnL: "Профит PnL", tradeResultLbl: "Результат сделки",
+        winBtn: "🟩 + Плюс (Win)", lossBtn: "🟥 - Минус (Loss)", resetStats: "🔄 Сбросить статистику",
+        calcTitle: "📐 Точный калькулятор риска", calcForexBtn: "📈 Калькулятор Форекс", calcBinaryBtn: "🎲 Калькулятор Опционов",
+        forexDepo: "Депозит", forexRiskPct: "Риск на сделку (%)", forexSL: "Stop Loss (пункты)", forexTP: "Take Profit (пункты)",
+        forexRiskVal: "🔴 Максимальный риск в сделке:", forexLotVal: "🟩 Рекомендуемый объем позиций:", forexTPVal: "📈 Ожидаемый профит (по TP):", forexRRVal: "⚖️ Соотношение Risk / Reward:",
+        binDepo: "Депозит", binStakePct: "Сумма 1-й сделки (%)", binPayoutPct: "Выплата брокера по активу (%)",
+        binStakeVal: "💵 Сумма 1-й сделки (Ставка):", binWinVal: "🟢 Чистый профит при Win:", binStepVal: "🔄 Страховка Мартингейл (Колено 1):", binStopVal: "🛑 Дневной лимит Stop-Day (15%):",
+        scanForexDepo: "Баланс Форекс", scanBinDepo: "Баланс Опционов", scanForexRisk: "Риск (%)", scanForexTF: "Таймфрейм", scanBinExp: "Время экспирации",
+        signalCurr: "Валюта счета сигналов:", scanForexTitle: "📈 ИИ-Сканер Форекс", scanBinTitle: "🎲 ИИ-Сканер Валютных Опционов",
+        scanMaxSignals: "📊 Макс. сигналов в интервал", scanInterval: "⏱️ Интервал сканирования", scanWinrate: "🎯 Мин. % одобрения ИИ",
+        toggleForexOn: "⚡ Включить Сканер Форекс", toggleForexOff: "⏸️ Выключить Сканер Форекс",
+        toggleBinOn: "🎲 Включить Сканер Опционов", toggleBinOff: "⏸️ Выключить Сканер Опционов",
+        subHeading: "💳 Подписка и доступ", subBtnForex: "📈 Форекс", subBtnBinary: "🎲 Валютные Опционы", subBtnMulti: "⚡ МУЛЬТИ", buySubBtn: "Оформить подписку",
+        trialHeading: "⏱️ Тестовый период (1 день)", trialTimeLeft: "До окончания: <b>23 ч. 59 мин.</b>",
+        subOpt7d: "7 Дней", subOpt1m: "1 Месяц", subOpt3m: "3 Месяца", subOpt6m: "6 Месяцев", subOpt12m: "12 Месяцев (1 Год)",
+        opt1Sig: "1 сигнал / интервал", opt2Sig: "2 сигнала / интервал", opt3Sig: "3 сигнала / интервал", opt5Sig: "5 сигналов / интервал", optNoLimit: "Без лимита",
+        optFWin70: "70% (Высокая частота)", optFWin75: "75% (Оптимальный)", optFWin80: "80% (Точные)", optFWin85: "85% (Строгий ИИ)",
+        optBWin70: "70% (Высокая частота)", optBWin75: "75% (Оптимальный баланс)", optBWin80: "80% (Повышенная точность)", optBWin85: "85% (Строгий фильтр ИИ)",
+        assetTitle: "Выбор активов для сканирования", accForex: "💱 Самые популярные валютные пары", accCrypto: "🪙 Криптовалюта", accStocks: "📈 Акции компаний", accCommodities: "🛢️ Сырьевые товары",
+        balStatusLbl: "💼 Статус баланса:", assetSelectedLbl: "🎯 Выбранные активы:", tgNotice: "📲 Уведомления и сигналы придут в личные сообщения в Telegram!",
+        streakHeader: "1 дн.", streakTitle: "🔥 Ваш стрик", streakVal: "🔥 1 День", streakDesc: "Первый день активности в этом месяце",
+        daysShort: ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'],
+        chatPlaceholder: "Введите ваш запрос...",
+        themeDark: "🌑 Тёмная (Dark Tech)", themeLight: "☀️ Светлая (Clean Light)", themeEmerald: "💚 Изумрудная (Emerald Classic)", themeBitcoin: "🪙 Биткоин (Bitcoin Gold)", themeCandlestick: "📈 Японские свечи (Candlestick Chart)"
+      },
+      en: {
+        navTab1: "Statistics", navTab2: "Scanner", navTab3: "Plans", navTab4: "AI Chat",
+        settingsTitle: "⚙️ Settings", themeLabel: "🎨 App Theme", langLabel: "🌐 Interface Language", closeBtn: "🚪 Close",
+        statForexBtn: "📈 Forex Statistics", statBinaryBtn: "🎲 Options Statistics",
+        winRate: "Win Rate", trades: "Trades", profitPnL: "Profit PnL", tradeResultLbl: "Trade Result",
+        winBtn: "🟩 + Win", lossBtn: "🟥 - Loss", resetStats: "🔄 Reset Statistics",
+        calcTitle: "📐 Accurate Risk Calculator", calcForexBtn: "📈 Forex Calculator", calcBinaryBtn: "🎲 Options Calculator",
+        forexDepo: "Deposit", forexRiskPct: "Risk per Trade (%)", forexSL: "Stop Loss (pips)", forexTP: "Take Profit (pips)",
+        forexRiskVal: "🔴 Max Risk per Trade:", forexLotVal: "🟩 Recommended Lot Size:", forexTPVal: "📈 Expected Profit (TP):", forexRRVal: "⚖️ Risk / Reward Ratio:",
+        binDepo: "Deposit", binStakePct: "1st Trade Stake (%)", binPayoutPct: "Broker Payout (%)",
+        binStakeVal: "💵 1st Trade Stake:", binWinVal: "🟢 Net Win Profit:", binStepVal: "🔄 Martingale Step 1:", binStopVal: "🛑 Daily Stop-Loss (15%):",
+        scanForexDepo: "Forex Balance", scanBinDepo: "Options Balance", scanForexRisk: "Risk (%)", scanForexTF: "Timeframe", scanBinExp: "Expiration Time",
+        signalCurr: "Signals Currency:", scanForexTitle: "📈 Forex AI Scanner", scanBinTitle: "🎲 Binary Options AI Scanner",
+        scanMaxSignals: "📊 Max Signals / Interval", scanInterval: "⏱️ Scan Interval", scanWinrate: "🎯 Min. AI Approval %",
+        toggleForexOn: "⚡ Start Forex Scanner", toggleForexOff: "⏸️ Stop Forex Scanner",
+        toggleBinOn: "🎲 Start Options Scanner", toggleBinOff: "⏸️ Stop Options Scanner",
+        subHeading: "💳 Subscription & Access", subBtnForex: "📈 Forex", subBtnBinary: "🎲 Binary Options", subBtnMulti: "⚡ MULTI", buySubBtn: "Subscribe Now",
+        trialHeading: "⏱️ Trial Period (1 Day)", trialTimeLeft: "Time left: <b>23 hrs 59 mins</b>",
+        subOpt7d: "7 Days", subOpt1m: "1 Month", subOpt3m: "3 Months", subOpt6m: "6 Months", subOpt12m: "12 Months (1 Year)",
+        opt1Sig: "1 signal / interval", opt2Sig: "2 signals / interval", opt3Sig: "3 signals / interval", opt5Sig: "5 signals / interval", optNoLimit: "No limit",
+        optFWin70: "70% (High Frequency)", optFWin75: "75% (Optimal)", optFWin80: "80% (Accurate)", optFWin85: "85% (Strict AI)",
+        optBWin70: "70% (High Frequency)", optBWin75: "75% (Optimal Balance)", optBWin80: "80% (High Accuracy)", optBWin85: "85% (Strict AI Filter)",
+        assetTitle: "Select Assets for Scanning", accForex: "💱 Major Currency Pairs", accCrypto: "🪙 Cryptocurrency", accStocks: "📈 Company Stocks", accCommodities: "🛢️ Commodities",
+        balStatusLbl: "💼 Balance Status:", assetSelectedLbl: "🎯 Selected Assets:", tgNotice: "📲 Notifications and signals will be sent directly to your Telegram DMs!",
+        streakHeader: "1 day", streakTitle: "🔥 Your Streak", streakVal: "🔥 1 Day", streakDesc: "First active day this month",
+        daysShort: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+        chatPlaceholder: "Type your query...",
+        themeDark: "🌑 Dark Tech", themeLight: "☀️ Clean Light", themeEmerald: "💚 Emerald Classic", themeBitcoin: "🪙 Bitcoin Gold", themeCandlestick: "📈 Candlestick Chart"
+      },
+      zh: {
+        navTab1: "统计数据", navTab2: "扫描器", navTab3: "订阅套餐", navTab4: "AI聊天",
+        settingsTitle: "⚙️ 设置", themeLabel: "🎨 界面主题", langLabel: "🌐 语言设置", closeBtn: "🚪 关闭",
+        statForexBtn: "📈 外汇统计", statBinaryBtn: "🎲 期权统计",
+        winRate: "胜率", trades: "交易笔数", profitPnL: "净收益 PnL", tradeResultLbl: "交易金额",
+        winBtn: "🟩 + 盈利 (Win)", lossBtn: "🟥 - 亏损 (Loss)", resetStats: "🔄 重置统计",
+        calcTitle: "📐 精确风控计算器", calcForexBtn: "📈 外汇计算器", calcBinaryBtn: "🎲 二元期权计算器",
+        forexDepo: "本金", forexRiskPct: "每单风控 (%)", forexSL: "止损点数 (Pips)", forexTP: "止盈点数 (Pips)",
+        forexRiskVal: "🔴 单笔最大风险:", forexLotVal: "🟩 建议手数:", forexTPVal: "📈 预估止盈收益:", forexRRVal: "⚖️ 盈亏比 Risk/Reward:",
+        binDepo: "本金", binStakePct: "首单比例 (%)", binPayoutPct: "券商回报率 (%)",
+        binStakeVal: "💵 首单交易金额:", binWinVal: "🟢 净利润:", binStepVal: "🔄 马丁倍投第1阶:", binStopVal: "🛑 每日止损线 (15%):",
+        scanForexDepo: "外汇余额", scanBinDepo: "期权余额", scanForexRisk: "风控 (%)", scanForexTF: "时间周期", scanBinExp: "到期时间",
+        signalCurr: "信号结算货币:", scanForexTitle: "📈 AI外汇扫描器", scanBinTitle: "🎲 AI期权扫描器",
+        scanMaxSignals: "📊 每次间隔最大信号数", scanInterval: "⏱️ 扫描间隔", scanWinrate: "🎯 AI最小认可准确率",
+        toggleForexOn: "⚡ 启动外汇扫描", toggleForexOff: "⏸️ 停止外汇扫描",
+        toggleBinOn: "🎲 启动期权扫描", toggleBinOff: "⏸️ 停止期权扫描",
+        subHeading: "💳 订阅与权限", subBtnForex: "📈 外汇", subBtnBinary: "🎲 期权", subBtnMulti: "⚡ 全能套餐", buySubBtn: "立即订阅",
+        trialHeading: "⏱️ 免费试用 (1天)", trialTimeLeft: "剩余时间: <b>23小时59分</b>",
+        subOpt7d: "7天", subOpt1m: "1个月", subOpt3m: "3个月", subOpt6m: "6个月", subOpt12m: "12个月 (1年)",
+        opt1Sig: "1个信号 / 间隔", opt2Sig: "2个信号 / 间隔", opt3Sig: "3个信号 / 间隔", opt5Sig: "5个信号 / 间隔", optNoLimit: "无限制",
+        optFWin70: "70% (高频)", optFWin75: "75% (最佳)", optFWin80: "80% (高精确度)", optFWin85: "85% (严格AI)",
+        optBWin70: "70% (高频)", optBWin75: "75% (最佳平衡)", optBWin80: "80% (高准确率)", optBWin85: "85% (严格AI过滤)",
+        assetTitle: "选择扫描资产", accForex: "💱 热门外汇对", accCrypto: "🪙 加密货币", accStocks: "📈 公司股票", accCommodities: "🛢️ 大宗商品",
+        balStatusLbl: "💼 账户余额状态:", assetSelectedLbl: "🎯 已选资产:", tgNotice: "📲 信号通知将通过Telegram私信直接推送给您！",
+        streakHeader: "1天", streakTitle: "🔥 你的连胜", streakVal: "🔥 1天", streakDesc: "本月首个活跃日",
+        daysShort: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+        chatPlaceholder: "请输入您的请求...",
+        themeDark: "🌑 暗黑科技 (Dark Tech)", themeLight: "☀️ 极简明亮 (Clean Light)", themeEmerald: "💚 翡翠绿 (Emerald)", themeBitcoin: "🪙 比特金 (Bitcoin Gold)", themeCandlestick: "📈 K线图 (Candlestick)"
+      },
+      kk: {
+        navTab1: "Статистика", navTab2: "Сканер", navTab3: "Тарифтер", navTab4: "ИИ-Чат",
+        settingsTitle: "⚙️ Баптаулар", themeLabel: "🎨 Безендіру тақырыбы", langLabel: "🌐 Интерфейс тілі", closeBtn: "🚪 Жабу",
+        statForexBtn: "📈 Форекс статистикасы", statBinaryBtn: "🎲 Опциондар статистикасы",
+        winRate: "Win Rate", trades: "Мәмілелер", profitPnL: "Пайда PnL", tradeResultLbl: "Мәміле нәтижесі",
+        winBtn: "🟩 + Плюс (Win)", lossBtn: "🟥 - Минус (Loss)", resetStats: "🔄 Статистиканы нөлдеу",
+        calcTitle: "📐 Нақты тәуекел калькуляторы", calcForexBtn: "📈 Форекс калькуляторы", calcBinaryBtn: "🎲 Опциондар калькуляторы",
+        forexDepo: "Депозит", forexRiskPct: "Тәуекел (%)", forexSL: "Stop Loss (пункттер)", forexTP: "Take Profit (пункттер)",
+        forexRiskVal: "🔴 Мәміледегі макс. тәуекел:", forexLotVal: "🟩 Ұсынылатын лот көлемі:", forexTPVal: "📈 Күтілетін пайда (TP):", forexRRVal: "⚖️ Risk / Reward қатысы:",
+        binDepo: "Депозит", binStakePct: "1-ші мәміле сомасы (%)", binPayoutPct: "Брокер төлемі (%)",
+        binStakeVal: "💵 1-ші мәміле сомасы:", binWinVal: "🟢 Таза пайда:", binStepVal: "🔄 Мартингейл қадамы 1:", binStopVal: "🛑 Күндізгі лимит (15%):",
+        scanForexDepo: "Форекс балансы", scanBinDepo: "Опциондар балансы", scanForexRisk: "Тәуекел (%)", scanForexTF: "Таймфрейм", scanBinExp: "Экспирация уақыты",
+        signalCurr: "Сигналдар валютасы:", scanForexTitle: "📈 ИИ-Сканер Форекс", scanBinTitle: "🎲 ИИ-Сканер Опциондар",
+        scanMaxSignals: "📊 Интервалдағы макс. сигналдар", scanInterval: "⏱️ Сканерлеу интервалы", scanWinrate: "🎯 ИИ мин. дәлдігі",
+        toggleForexOn: "⚡ Форекс сканерін қосу", toggleForexOff: "⏸️ Форекс сканерін өшіру",
+        toggleBinOn: "🎲 Опциондар сканерін қосу", toggleBinOff: "⏸️ Опциондар сканерін өшіру",
+        subHeading: "💳 Жазылым және рұқсат", subBtnForex: "📈 Форекс", subBtnBinary: "🎲 Валюталық Опциондар", subBtnMulti: "⚡ МУЛЬТИ", buySubBtn: "Жазылымды рәсімдеу",
+        trialHeading: "⏱️ Сынақ мерзімі (1 күн)", trialTimeLeft: "Аяқталуына: <b>23 сағ. 59 мин.</b>",
+        subOpt7d: "7 Күн", subOpt1m: "1 Ай", subOpt3m: "3 Ай", subOpt6m: "6 Ай", subOpt12m: "12 Ай (1 Жыл)",
+        opt1Sig: "1 сигнал / интервал", opt2Sig: "2 сигнал / интервал", opt3Sig: "3 сигнал / интервал", opt5Sig: "5 сигнал / интервал", optNoLimit: "Шектеусіз",
+        optFWin70: "70% (Жоғары жиілік)", optFWin75: "75% (Оңтайлы)", optFWin80: "80% (Нақты)", optFWin85: "85% (Катаң ИИ)",
+        optBWin70: "70% (Жоғары жиілік)", optBWin75: "75% (Оңтайлы баланс)", optBWin80: "80% (Жоғары дәлдік)", optBWin85: "85% (Катаң ИИ сүзгісі)",
+        assetTitle: "Сканерлеуге активтерді таңдау", accForex: "💱 Ең танымал валюталық жұптар", accCrypto: "🪙 Криптовалюта", accStocks: "📈 Компания акциялары", accCommodities: "🛢️ Шикізат тауарлары",
+        balStatusLbl: "💼 Баланс мәртебесі:", assetSelectedLbl: "🎯 Таңдалған активтер:", tgNotice: "📲 Хабарландырулар мен сигналдар Telegram жеке хабарламаларына келеді!",
+        streakHeader: "1 кн.", streakTitle: "🔥 Сіздің стригіңіз", streakVal: "🔥 1 Күн", streakDesc: "Осы айдағы алғашқы белсенділік күні",
+        daysShort: ['ДС', 'СС', 'СӘ', 'БС', 'ЖУ', 'СБ', 'ЖС'],
+        chatPlaceholder: "Сұрауыңызды енгізіңіз...",
+        themeDark: "🌑 Қараңғы (Dark Tech)", themeLight: "☀️ Жарық (Clean Light)", themeEmerald: "💚 Зүбаржат (Emerald)", themeBitcoin: "🪙 Биткоин (Bitcoin Gold)", themeCandlestick: "📈 Жапон шамдары (Candlestick)"
+      },
+      de: {
+        navTab1: "Statistik", navTab2: "Scanner", navTab3: "Tarife", navTab4: "KI-Chat",
+        settingsTitle: "⚙️ Einstellungen", themeLabel: "🎨 App-Design", langLabel: "🌐 Sprache", closeBtn: "🚪 Schließen",
+        statForexBtn: "📈 Forex Statistik", statBinaryBtn: "🎲 Optionen Statistik",
+        winRate: "Gewinnrate", trades: "Trades", profitPnL: "Gewinn PnL", tradeResultLbl: "Trade-Ergebnis",
+        winBtn: "🟩 + Gewinn", lossBtn: "🟥 - Verlust", resetStats: "🔄 Statistik Zurücksetzen",
+        calcTitle: "📐 Risiko-Rechner", calcForexBtn: "📈 Forex Rechner", calcBinaryBtn: "🎲 Optionen Rechner",
+        forexDepo: "Einzahlung", forexRiskPct: "Risiko pro Trade (%)", forexSL: "Stop Loss (Pips)", forexTP: "Take Profit (Pips)",
+        forexRiskVal: "🔴 Max. Risiko:", forexLotVal: "🟩 Empfohlene Lot-Größe:", forexTPVal: "📈 Erwarteter Gewinn:", forexRRVal: "⚖️ Risiko/Belohnung:",
+        binDepo: "Einzahlung", binStakePct: "1. Einsatz (%)", binPayoutPct: "Broker Auszahlung (%)",
+        binStakeVal: "💵 1. Einsatz Betrag:", binWinVal: "🟢 Nettogewinn:", binStepVal: "🔄 Martingale Schritt 1:", binStopVal: "🛑 Tageslimit (15%):",
+        scanForexDepo: "Forex Guthaben", scanBinDepo: "Optionen Guthaben", scanForexRisk: "Risiko (%)", scanForexTF: "Zeitrahmen", scanBinExp: "Ablaufzeit",
+        signalCurr: "Signal-Währung:", scanForexTitle: "📈 Forex KI-Scanner", scanBinTitle: "🎲 Optionen KI-Scanner",
+        scanMaxSignals: "📊 Max. Signale pro Intervall", scanInterval: "⏱️ Scan-Intervall", scanWinrate: "🎯 Min. KI-Genauigkeit",
+        toggleForexOn: "⚡ Forex Scanner Starten", toggleForexOff: "⏸️ Forex Scanner Stoppen",
+        toggleBinOn: "🎲 Optionen Scanner Starten", toggleBinOff: "⏸️ Optionen Scanner Stoppen",
+        subHeading: "💳 Abonnement & Zugang", subBtnForex: "📈 Forex", subBtnBinary: "🎲 Optionen", subBtnMulti: "⚡ MULTI", buySubBtn: "Jetzt Abonnieren",
+        trialHeading: "⏱️ Testphase (1 Tag)", trialTimeLeft: "Verbleibend: <b>23 Std. 59 Min.</b>",
+        subOpt7d: "7 Tage", subOpt1m: "1 Monat", subOpt3m: "3 Monate", subOpt6m: "6 Monate", subOpt12m: "12 Monate (1 Jahr)",
+        opt1Sig: "1 Signal / Intervall", opt2Sig: "2 Signale / Intervall", opt3Sig: "3 Signale / Intervall", opt5Sig: "5 Signale / Intervall", optNoLimit: "Kein Limit",
+        optFWin70: "70% (Hohe Frequenz)", optFWin75: "75% (Optimal)", optFWin80: "80% (Präzise)", optFWin85: "85% (Strenge KI)",
+        optBWin70: "70% (Hohe Frequenz)", optBWin75: "75% (Optimale Balance)", optBWin80: "80% (Hohe Genauigkeit)", optBWin85: "85% (Strenger KI-Filter)",
+        assetTitle: "Assets zum Scannen auswählen", accForex: "💱 Währungspaare", accCrypto: "🪙 Kryptowährungen", accStocks: "📈 Aktien", accCommodities: "🛢️ Rohstoffe",
+        balStatusLbl: "💼 Kontostand-Status:", assetSelectedLbl: "🎯 Ausgewählte Assets:", tgNotice: "📲 Benachrichtigungen und Signale werden direkt in Telegram gesendet!",
+        streakHeader: "1 Tag", streakTitle: "🔥 Dein Streak", streakVal: "🔥 1 Tag", streakDesc: "Erster aktiver Tag in diesem Monat",
+        daysShort: ['MO', 'DI', 'MI', 'DO', 'FR', 'SA', 'SO'],
+        chatPlaceholder: "Geben Sie Ihre Anfrage ein...",
+        themeDark: "🌑 Dunkel (Dark Tech)", themeLight: "☀️ Hell (Clean Light)", themeEmerald: "💚 Smaragd (Emerald)", themeBitcoin: "🪙 Bitcoin Gold", themeCandlestick: "📈 Kerzenchart (Candlestick)"
+      },
+      es: {
+        navTab1: "Estadística", navTab2: "Escáner", navTab3: "Planes", navTab4: "Chat IA",
+        settingsTitle: "⚙️ Ajustes", themeLabel: "🎨 Tema", langLabel: "🌐 Idioma", closeBtn: "🚪 Cerrar",
+        statForexBtn: "📈 Estadística Forex", statBinaryBtn: "🎲 Estadística Opciones",
+        winRate: "Tasa de Acierto", trades: "Operaciones", profitPnL: "Ganancia PnL", tradeResultLbl: "Resultado de Operación",
+        winBtn: "🟩 + Ganada", lossBtn: "🟥 - Perdida", resetStats: "🔄 Reiniciar Estadística",
+        calcTitle: "📐 Calculadora de Riesgo", calcForexBtn: "📈 Calculadora Forex", calcBinaryBtn: "🎲 Calculadora Opciones",
+        forexDepo: "Depósito", forexRiskPct: "Riesgo por Operación (%)", forexSL: "Stop Loss (pips)", forexTP: "Take Profit (pips)",
+        forexRiskVal: "🔴 Riesgo Máximo:", forexLotVal: "🟩 Tamaño de Lote:", forexTPVal: "📈 Ganancia Esperada:", forexRRVal: "⚖️ Ratio Riesgo / Beneficio:",
+        binDepo: "Depósito", binStakePct: "1ª Inversión (%)", binPayoutPct: "Retorno del Broker (%)",
+        binStakeVal: "💵 Monto 1ª Operación:", binWinVal: "🟢 Ganancia Neta:", binStepVal: "🔄 Martingala Paso 1:", binStopVal: "🛑 Límite Diario (15%):",
+        scanForexDepo: "Balance Forex", scanBinDepo: "Balance Opciones", scanForexRisk: "Riesgo (%)", scanForexTF: "Marco Temporal", scanBinExp: "Tiempo de Expiración",
+        signalCurr: "Moneda de Señales:", scanForexTitle: "📈 Escáner IA Forex", scanBinTitle: "🎲 Escáner IA Opciones",
+        scanMaxSignals: "📊 Máx. Señales por Intervalo", scanInterval: "⏱️ Intervalo de Escaneo", scanWinrate: "🎯 % Mínimo IA",
+        toggleForexOn: "⚡ Iniciar Escáner Forex", toggleForexOff: "⏸️ Detener Escáner Forex",
+        toggleBinOn: "🎲 Iniciar Escáner Opciones", toggleBinOff: "⏸️ Detener Escáner Opciones",
+        subHeading: "💳 Suscripción y Acceso", subBtnForex: "📈 Forex", subBtnBinary: "🎲 Opciones Binarias", subBtnMulti: "⚡ MULTI", buySubBtn: "Suscribirse Ahora",
+        trialHeading: "⏱️ Periodo de Prueba (1 Día)", trialTimeLeft: "Tiempo restante: <b>23 hs 59 mins</b>",
+        subOpt7d: "7 Días", subOpt1m: "1 Mes", subOpt3m: "3 Meses", subOpt6m: "6 Meses", subOpt12m: "12 Meses (1 Año)",
+        opt1Sig: "1 señal / intervalo", opt2Sig: "2 señales / intervalo", opt3Sig: "3 señales / intervalo", opt5Sig: "5 señales / intervalo", optNoLimit: "Sin límite",
+        optFWin70: "70% (Alta Frecuencia)", optFWin75: "75% (Óptimo)", optFWin80: "80% (Preciso)", optFWin85: "85% (IA Estricta)",
+        optBWin70: "70% (Alta Frecuencia)", optBWin75: "75% (Balance Óptimo)", optBWin80: "80% (Alta Precisión)", optBWin85: "85% (Filtro de IA Estricto)",
+        assetTitle: "Seleccionar Activos para Escaneo", accForex: "💱 Pares Principales", accCrypto: "🪙 Criptomonedas", accStocks: "📈 Acciones", accCommodities: "🛢️ Materias Primas",
+        balStatusLbl: "💼 Estado del Balance:", assetSelectedLbl: "🎯 Activos Seleccionados:", tgNotice: "📲 ¡Las notificaciones y señales llegarán por mensaje privado en Telegram!",
+        streakHeader: "1 día", streakTitle: "🔥 Tu Racha", streakVal: "🔥 1 Día", streakDesc: "Primer día activo este mes",
+        daysShort: ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'],
+        chatPlaceholder: "Escribe tu consulta...",
+        themeDark: "🌑 Oscuro (Dark Tech)", themeLight: "☀️ Claro (Clean Light)", themeEmerald: "💚 Esmeralda (Emerald)", themeBitcoin: "🪙 Bitcoin Gold", themeCandlestick: "📈 Velas Japonesas (Candlestick)"
+      },
+      uz: {
+        navTab1: "Statistika", navTab2: "Skaner", navTab3: "Tariflar", navTab4: "AI-Chat",
+        settingsTitle: "⚙️ Sozlamalar", themeLabel: "🎨 Mavzu", langLabel: "🌐 Interfeys tili", closeBtn: "🚪 Yopish",
+        statForexBtn: "📈 Forex statistikasi", statBinaryBtn: "🎲 Opsionlar statistikasi",
+        winRate: "Win Rate", trades: "Bitimlar", profitPnL: "Foyda PnL", tradeResultLbl: "Bitim natijasi",
+        winBtn: "🟩 + Foyda (Win)", lossBtn: "🟥 - Zarar (Loss)", resetStats: "🔄 Statistikani nolga tushirish",
+        calcTitle: "📐 Aniq xavf kalkulyatori", calcForexBtn: "📈 Forex kalkulyatori", calcBinaryBtn: "🎲 Opsionlar kalkulyatori",
+        forexDepo: "Depozit", forexRiskPct: "Bitim xavfi (%)", forexSL: "Stop Loss (punktlar)", forexTP: "Take Profit (punktlar)",
+        forexRiskVal: "🔴 Maksimal xavf:", forexLotVal: "🟩 Tavsiya etilgan lot hajmi:", forexTPVal: "📈 Kutilayotgan foyda (TP):", forexRRVal: "⚖️ Risk / Reward nisbati:",
+        binDepo: "Depozit", binStakePct: "1-bitim summasi (%)", binPayoutPct: "Broker to'lovi (%)",
+        binStakeVal: "💵 1-bitim summasi:", binWinVal: "🟢 Sof foyda:", binStepVal: "🔄 Martingeyl 1-qadam:", binStopVal: "🛑 Kunlik limit (15%):",
+        scanForexDepo: "Forex balansi", scanBinDepo: "Opsionlar balansi", scanForexRisk: "Xavf (%)", scanForexTF: "Taymfreym", scanBinExp: "Ekspiratsiya vaqti",
+        signalCurr: "Signallar valyutasi:", scanForexTitle: "📈 Forex AI-Skaneri", scanBinTitle: "🎲 Opsionlar AI-Skaneri",
+        scanMaxSignals: "📊 Intervaldagı maks. signallar", scanInterval: "⏱️ Skanerlash intervali", scanWinrate: "🎯 AI min. aniqligi",
+        toggleForexOn: "⚡ Forex skanerini yoqish", toggleForexOff: "⏸️ Forex skanerini o'chirish",
+        toggleBinOn: "🎲 Opsion skanerini yoqish", toggleBinOff: "⏸️ Opsion skanerini o'chirish",
+        subHeading: "💳 Obuna va kirish", subBtnForex: "📈 Forex", subBtnBinary: "🎲 Valyuta Opsionlari", subBtnMulti: "⚡ MULTI", buySubBtn: "Obuna bo'lish",
+        trialHeading: "⏱️ Sinov davri (1 kun)", trialTimeLeft: "Tugashiga: <b>23 soat 59 min.</b>",
+        subOpt7d: "7 Kun", subOpt1m: "1 Oysa", subOpt3m: "3 Oysa", subOpt6m: "6 Oysa", subOpt12m: "12 Oysa (1 Yil)",
+        opt1Sig: "1 signal / interval", opt2Sig: "2 signal / interval", opt3Sig: "3 signal / interval", opt5Sig: "5 signal / interval", optNoLimit: "Cheklovsiz",
+        optFWin70: "70% (Yuqori chastota)", optFWin75: "75% (Optimal)", optFWin80: "80% (Aniq)", optFWin85: "85% (Qat'iy AI)",
+        optBWin70: "70% (Yuqori chastota)", optBWin75: "75% (Optimal balans)", optBWin80: "80% (Yuqori aniqlik)", optBWin85: "85% (Qat'iy AI filtri)",
+        assetTitle: "Skanerlash uchun aktivlarni tanlash", accForex: "💱 Mashhur valyuta juftliklari", accCrypto: "🪙 Kriptovalyuta", accStocks: "📈 Aktsiyalar", accCommodities: "🛢️ Xom ashyo",
+        balStatusLbl: "💼 Balans holati:", assetSelectedLbl: "🎯 Tanlangan aktivlar:", tgNotice: "📲 Bildirishnomalar va signallar Telegram shaxsiy xabarlariga keladi!",
+        streakHeader: "1 kun", streakTitle: "🔥 Sizning strikingiz", streakVal: "🔥 1 Kun", streakDesc: "Ushbu oydagi birinchi faollik kuni",
+        daysShort: ['DU', 'SE', 'CH', 'PA', 'JU', 'SH', 'YA'],
+        chatPlaceholder: "So'rovingizni kiriting...",
+        themeDark: "🌑 Qorong'i (Dark Tech)", themeLight: "☀️ Yorug' (Clean Light)", themeEmerald: "💚 Zumrad (Emerald)", themeBitcoin: "🪙 Bitkoin (Bitcoin Gold)", themeCandlestick: "📈 Yapon shamdonlari (Candlestick)"
+      },
+      ky: {
+        navTab1: "Статистика", navTab2: "Сканер", navTab3: "Тарифтер", navTab4: "ИИ-Чат",
+        settingsTitle: "⚙️ Жөндөөлөр", themeLabel: "🎨 Дизайн темасы", langLabel: "🌐 Интерфейс тили", closeBtn: "🚪 Жабуу",
+        statForexBtn: "📈 Форекс статистикасы", statBinaryBtn: "🎲 Опциондор статистикасы",
+        winRate: "Win Rate", trades: "Келишимдер", profitPnL: "Пайда PnL", tradeResultLbl: "Келишим жыйынтыгы",
+        winBtn: "🟩 + Плюс (Win)", lossBtn: "🟥 - Минус (Loss)", resetStats: "🔄 Статистиканы тазалоо",
+        calcTitle: "📐 Тартмал тобокелдик калькулятору", calcForexBtn: "📈 Форекс калькулятору", calcBinaryBtn: "🎲 Опциондор калькулятору",
+        forexDepo: "Депозит", forexRiskPct: "Тобокелдик (%)", forexSL: "Stop Loss (пункттар)", forexTP: "Take Profit (пункттар)",
+        forexRiskVal: "🔴 Максималдуу тобокелдик:", forexLotVal: "🟩 Сунушталган лот көлөмү:", forexTPVal: "📈 Күтүлгөн пайда (TP):", forexRRVal: "⚖️ Risk / Reward катышы:",
+        binDepo: "Депозит", binStakePct: "1-келишим суммасы (%)", binPayoutPct: "Брокер төлөмү (%)",
+        binStakeVal: "💵 1-келишим суммасы:", binWinVal: "🟢 Таза пайда:", binStepVal: "🔄 Мартингейл 1-кадам:", binStopVal: "🛑 Күндүк лимит (15%):",
+        scanForexDepo: "Форекс балансы", scanBinDepo: "Опциондор балансы", scanForexRisk: "Тобокелдик (%)", scanForexTF: "Таймфрейм", scanBinExp: "Экспирация убактысы",
+        signalCurr: "Сигналдар валютасы:", scanForexTitle: "📈 ИИ-Сканер Форекс", scanBinTitle: "🎲 ИИ-Сканер Опциондор",
+        scanMaxSignals: "📊 Интервалдагы макс. сигналдар", scanInterval: "⏱️ Сканерлөө интервалы", scanWinrate: "🎯 ИИ мин. тактыгы",
+        toggleForexOn: "⚡ Форекс сканерин күйгүзүү", toggleForexOff: "⏸️ Форекс сканерин өчүрүү",
+        toggleBinOn: "🎲 Опциондор сканерин күйгүзүү", toggleBinOff: "⏸️ Опциондор сканерин өчүрүү",
+        subHeading: "💳 Жазылуу жана кирүү", subBtnForex: "📈 Форекс", subBtnBinary: "🎲 Валюталык Опциондор", subBtnMulti: "⚡ МУЛЬТИ", buySubBtn: "Жазылууну тариздөө",
+        trialHeading: "⏱️ Сыноо мөөнөтү (1 күн)", trialTimeLeft: "Аякташына: <b>23 саат 59 мин.</b>",
+        subOpt7d: "7 Күн", subOpt1m: "1 Ай", subOpt3m: "3 Ай", subOpt6m: "6 Ай", subOpt12m: "12 Ай (1 Жыл)",
+        opt1Sig: "1 сигнал / интервал", opt2Sig: "2 сигнал / интервал", opt3Sig: "3 сигнал / интервал", opt5Sig: "5 сигнал / интервал", optNoLimit: "Чектөөсүз",
+        optFWin70: "70% (Жогорку жыштык)", optFWin75: "75% (Оптималдуу)", optFWin80: "80% (Так)", optFWin85: "85% (Катуу ИИ)",
+        optBWin70: "70% (Жогорку жыштык)", optBWin75: "75% (Оптималдуу баланс)", optBWin80: "80% (Жогорку тактык)", optBWin85: "85% (Катуу ИИ чыпкасы)",
+        assetTitle: "Сканерлөө үчүн активдерди тандоо", accForex: "💱 Эң популярдуу валюталык жуптар", accCrypto: "🪙 Криптовалюта", accStocks: "📈 Акциялар", accCommodities: "🛢️ Чийки зат",
+        balStatusLbl: "💼 Баланс абалы:", assetSelectedLbl: "🎯 Тандалган активдер:", tgNotice: "📲 Эскертмелер жана сигналдар Telegram жеке билдирүүлөрүнө келет!",
+        streakHeader: "1 күн", streakTitle: "🔥 Сиздин стрикиңиз", streakVal: "🔥 1 Күн", streakDesc: "Ушул айдагы биринчи активдүүлүк күнү",
+        daysShort: ['ДШ', 'ШШ', 'ШАР', 'БШ', 'ЖУМ', 'ИШ', 'ЖЕК'],
+        chatPlaceholder: "Сурооңузду киргизиңиз...",
+        themeDark: "🌑 Карангы (Dark Tech)", themeLight: "☀️ Жарык (Clean Light)", themeEmerald: "💚 Изумруд (Emerald)", themeBitcoin: "🪙 Биткоин (Bitcoin Gold)", themeCandlestick: "📈 Жапон шамдары (Candlestick)"
+      },
+      tk: {
+        navTab1: "Statistika", navTab2: "Skaner", navTab3: "Tarifler", navTab4: "AI-Çat",
+        settingsTitle: "⚙️ Sazlamalar", themeLabel: "🎨 Mowuk temasy", langLabel: "🌐 Interfeýs dili", closeBtn: "🚪 Ýapmak",
+        statForexBtn: "📈 Foreks statistikasy", statBinaryBtn: "🎲 Opsionlar statistikasy",
+        winRate: "Win Rate", trades: "Söwdalar", profitPnL: "Pahda PnL", tradeResultLbl: "Söwda netijesi",
+        winBtn: "🟩 + Gazanç (Win)", lossBtn: "🟥 - Ýitgi (Loss)", resetStats: "🔄 Statistikany nollemek",
+        calcTitle: "📐 Anyk töwekgelçilik kalkulýatory", calcForexBtn: "📈 Foreks kalkulýatory", calcBinaryBtn: "🎲 Opsionlar kalkulýatory",
+        forexDepo: "Depozit", forexRiskPct: "Töwekgelçilik (%)", forexSL: "Stop Loss (punktlar)", forexTP: "Take Profit (punktlar)",
+        forexRiskVal: "🔴 Maksimal töwekgelçilik:", forexLotVal: "🟩 Maslahat berilýän lot göwrümi:", forexTPVal: "📈 Garaşylýan gazanç (TP):", forexRRVal: "⚖️ Risk / Reward gatnaşygy:",
+        binDepo: "Depozit", binStakePct: "1-nji söwda möçberi (%)", binPayoutPct: "Broker tölegi (%)",
+        binStakeVal: "💵 1-nji söwda möçberi:", binWinVal: "🟢 Arassa gazanç:", binStepVal: "🔄 Martingeyl 1-nji ädim:", binStopVal: "🛑 Gündelik çäk (15%):",
+        scanForexDepo: "Foreks balansi", scanBinDepo: "Opsionlar balansi", scanForexRisk: "Töwekgelçilik (%)", scanForexTF: "Taýmfreým", scanBinExp: "Möhlet wagty",
+        signalCurr: "Signallar walýtasy:", scanForexTitle: "📈 Foreks AI-Skaneri", scanBinTitle: "🎲 Opsionlar AI-Skaneri",
+        scanMaxSignals: "📊 Interwaldaky maks. signallar", scanInterval: "⏱️ Skanirleme interwaly", scanWinrate: "🎯 AI min. takyklygy",
+        toggleForexOn: "⚡ Foreks skanerini ýakmak", toggleForexOff: "⏸️ Foreks skanerini öçürmek",
+        toggleBinOn: "🎲 Opsion skanerini ýakmak", toggleBinOff: "⏸️ Opsion skanerini öçürmek",
+        subHeading: "💳 Ýazylmak we giriş", subBtnForex: "📈 Foreks", subBtnBinary: "🎲 Opsionlar", subBtnMulti: "⚡ MULTI", buySubBtn: "Ýazylmak",
+        trialHeading: "⏱️ Synag möhleti (1 gün)", trialTimeLeft: "Galan wagty: <b>23 sag. 59 min.</b>",
+        subOpt7d: "7 Gün", subOpt1m: "1 Aý", subOpt3m: "3 Aý", subOpt6m: "6 Aý", subOpt12m: "12 Aý (1 Ýyl)",
+        opt1Sig: "1 signal / interwal", opt2Sig: "2 signal / interwal", opt3Sig: "3 signal / interwal", opt5Sig: "5 signal / interwal", optNoLimit: "Çäksiz",
+        optFWin70: "70% (Ýokary ýygylyk)", optFWin75: "75% (Optimal)", optFWin80: "80% (Anyk)", optFWin85: "85% (Gaty AI)",
+        optBWin70: "70% (Ýokary ýygylyk)", optBWin75: "75% (Optimal balans)", optBWin80: "80% (Ýokary takyklyk)", optBWin85: "85% (Gaty AI süzgüçi)",
+        assetTitle: "Skanirlemek üçin aktiwleri saýlamak", accForex: "💱 Meşhur walýuta jübütleri", accCrypto: "🪙 Kriptowalýuta", accStocks: "📈 Aksiyalar", accCommodities: "🛢️ Çig mal",
+        balStatusLbl: "💼 Balans ýagdaýy:", assetSelectedLbl: "🎯 Saýlanan aktiwler:", tgNotice: "📲 Bildirişler we signallar Telegram hususy hatlaryňyzda geler!",
+        streakHeader: "1 gün", streakTitle: "🔥 Siziň strikiňiz", streakVal: "🔥 1 Gün", streakDesc: "Bu aýdaky birinji işjeňlik güni",
+        daysShort: ['DU', 'SI', 'ÇA', 'PE', 'JU', 'ŞE', 'ÝE'],
+        chatPlaceholder: "Haýyşyňyzy giriziň...",
+        themeDark: "🌑 Garaňky (Dark Tech)", themeLight: "☀️ Ýagty (Clean Light)", themeEmerald: "💚 Zümürret (Emerald)", themeBitcoin: "🪙 Bitkoin (Bitcoin Gold)", themeCandlestick: "📈 Ýapon çyralary (Candlestick)"
+      },
+      tg: {
+        navTab1: "Статистика", navTab2: "Сканер", navTab3: "Тарифҳо", navTab4: "ИИ-Чат",
+        settingsTitle: "⚙️ Танзимот", themeLabel: "🎨 Намуди зоҳирӣ", langLabel: "🌐 Забони интерфейс", closeBtn: "🚪 Бастан",
+        statForexBtn: "📈 Статистикаи Форекс", statBinaryBtn: "🎲 Статистикаи Опсионҳо",
+        winRate: "Win Rate", trades: "Муомилаҳо", profitPnL: "Фоидаи PnL", tradeResultLbl: "Натиҷаи муомила",
+        winBtn: "🟩 + Фоида (Win)", lossBtn: "🟥 - Зарар (Loss)", resetStats: "🔄 Тоза кардани статистика",
+        calcTitle: "📐 Калкулятори дақиқи хавф", calcForexBtn: "📈 Калкулятори Форекс", calcBinaryBtn: "🎲 Калкулятори Опсионҳо",
+        forexDepo: "Депозит", forexRiskPct: "Хавфи муомила (%)", forexSL: "Stop Loss (пунктҳо)", forexTP: "Take Profit (пунктҳо)",
+        forexRiskVal: "🔴 Хавфи максималӣ:", forexLotVal: "🟩 Ҳаҷми тавсияшудаи лот:", forexTPVal: "📈 Фоидаи чашмдошт (TP):", forexRRVal: "⚖️ Nisbati Risk / Reward:",
+        binDepo: "Депозит", binStakePct: "Маблағи муомилаи 1-ум (%)", binPayoutPct: "Пардохти брокер (%)",
+        binStakeVal: "💵 Маблағи муомилаи 1-ум:", binWinVal: "🟢 Фоидаи холис:", binStepVal: "🔄 Мартингейл қадами 1:", binStopVal: "🛑 Лимити рӯзона (15%):",
+        scanForexDepo: "Баланси Форекс", scanBinDepo: "Баланси Опсионҳо", scanForexRisk: "Хавф (%)", scanForexTF: "Таймфрейм", scanBinExp: "Вақти экспиратсия",
+        signalCurr: "Валютаи сигналҳо:", scanForexTitle: "📈 ИИ-Сканер Форекс", scanBinTitle: "🎲 ИИ-Сканер Опсионҳо",
+        scanMaxSignals: "📊 Макс. сигналҳо дар интервал", scanInterval: "⏱️ Интервали сканеркунӣ", scanWinrate: "🎯 ИИ мин. дақиқият",
+        toggleForexOn: "⚡ Гузоштани сканери Форекс", toggleForexOff: "⏸️ Хомӯш кардани сканери Форекс",
+        toggleBinOn: "🎲 Гузоштани сканери Опсионҳо", toggleBinOff: "⏸️ Хомӯш кардани сканери Опсионҳо",
+        subHeading: "💳 Обуна ва дастрасӣ", subBtnForex: "📈 Форекс", subBtnBinary: "🎲 Опсионҳо", subBtnMulti: "⚡ МУЛЬТИ", buySubBtn: "Обуна шудан",
+        trialHeading: "⏱️ Давраи санҷишӣ (1 рӯз)", trialTimeLeft: "То охир: <b>23 соат 59 дақ.</b>",
+        subOpt7d: "7 Рӯз", subOpt1m: "1 Моҳ", subOpt3m: "3 Моҳ", subOpt6m: "6 Моҳ", subOpt12m: "12 Моҳ (1 Сол)",
+        opt1Sig: "1 сигнал / интервал", opt2Sig: "2 сигнал / интервал", opt3Sig: "3 сигнал / интервал", opt5Sig: "5 сигнал / интервал", optNoLimit: "Бе маҳдудият",
+        optFWin70: "70% (Басомади баланд)", optFWin75: "75% (Оптималӣ)", optFWin80: "80% (Дақиқ)", optFWin85: "85% (ИИ-и қатъӣ)",
+        optBWin70: "70% (Басомади баланд)", optBWin75: "75% (Баланси оптималӣ)", optBWin80: "80% (Дақиқияти баланд)", optBWin85: "85% (Филтри қатъии ИИ)",
+        assetTitle: "Интихоби активҳо барои сканеркунӣ", accForex: "💱 Ҷуфтҳои асъорӣ", accCrypto: "🪙 Криптовалюта", accStocks: "📈 Аксияҳо", accCommodities: "🛢️ Молу маҳсулот",
+        balStatusLbl: "💼 Ҳолати баланс:", assetSelectedLbl: "🎯 Активҳои интихобшуда:", tgNotice: "📲 Огоҳиҳо ва сигналҳо ба паёмҳои шахсии Telegram меоянд!",
+        streakHeader: "1 рӯз", streakTitle: "🔥 Стрики шумо", streakVal: "🔥 1 Рӯз", streakDesc: "Рӯзи аввали фаъолият дар ин моҳ",
+        daysShort: ['ДШ', 'СШ', 'ЧШ', 'ПШ', 'ҶУМ', 'ШАН', 'ЯК'],
+        chatPlaceholder: "Дархости худро ворид кунед...",
+        themeDark: "🌑 Торик (Dark Tech)", themeLight: "☀️ Рӯшон (Clean Light)", themeEmerald: "💚 Зумрад (Emerald)", themeBitcoin: "🪙 Биткоин (Bitcoin Gold)", themeCandlestick: "📈 Шамъҳои японӣ (Candlestick)"
+      },
+      az: {
+        navTab1: "Statistika", navTab2: "Skaner", navTab3: "Tariflər", navTab4: "AI Çat",
+        settingsTitle: "⚙️ Tənzimləmələr", themeLabel: "🎨 Mövzu", langLabel: "🌐 İnterfeys dili", closeBtn: "🚪 Bağla",
+        statForexBtn: "📈 Forex Statistikası", statBinaryBtn: "🎲 Opsion Statistikası",
+        winRate: "Qazanma Dərəcəsi", trades: "Əməliyyatlar", profitPnL: "Mənfəət PnL", tradeResultLbl: "Əməliyyat Nəticəsi",
+        winBtn: "🟩 + Mənfəət (Win)", lossBtn: "🟥 - Zərər (Loss)", resetStats: "🔄 Statistikanı Sıfırla",
+        calcTitle: "📐 Dəqiq Risk Kalkulyatoru", calcForexBtn: "📈 Forex Kalkulyatoru", calcBinaryBtn: "🎲 Opsion Kalkulyatoru",
+        forexDepo: "Depozit", forexRiskPct: "Əməliyyat Riski (%)", forexSL: "Stop Loss (pips)", forexTP: "Take Profit (pips)",
+        forexRiskVal: "🔴 Maksimal Risk:", forexLotVal: "🟩 Məsləhət Görülən Lot Həcmi:", forexTPVal: "📈 Gözlənilən Mənfəət:", forexRRVal: "⚖️ Risk / Mükafat Nisbəti:",
+        binDepo: "Depozit", binStakePct: "1-ci Əməliyyat Məbləği (%)", binPayoutPct: "Broker Ödənişi (%)",
+        binStakeVal: "💵 1-ci Əməliyyat Məbləği:", binWinVal: "🟢 Xalis Mənfəət:", binStepVal: "🔄 Martingale Adım 1:", binStopVal: "🛑 Günlük Limit (15%):",
+        scanForexDepo: "Forex Balansı", scanBinDepo: "Opsion Balansı", scanForexRisk: "Risk (%)", scanForexTF: "Taymfreym", scanBinExp: "Bitiş Vaxtı",
+        signalCurr: "Siqnal Valyutası:", scanForexTitle: "📈 Forex AI Skaneri", scanBinTitle: "🎲 Opsion AI Skaneri",
+        scanMaxSignals: "📊 İntervalda Maks. Siqnal", scanInterval: "⏱️ Skan İntervalı", scanWinrate: "🎯 Min. AI Dəqiqliyi",
+        toggleForexOn: "⚡ Forex Skanerini Başlat", toggleForexOff: "⏸️ Forex Skanerini Dayandır",
+        toggleBinOn: "🎲 Opsion Skanerini Başlat", toggleBinOff: "⏸️ Opsion Skanerini Dayandır",
+        subHeading: "💳 Abunəlik və Giriş", subBtnForex: "📈 Forex", subBtnBinary: "🎲 Binart Opsionlar", subBtnMulti: "⚡ MULTİ", buySubBtn: "Abunə Ol",
+        trialHeading: "⏱️ Sınaq Müddəti (1 Gün)", trialTimeLeft: "Qalan vaxt: <b>23 saat 59 dəq.</b>",
+        subOpt7d: "7 Gün", subOpt1m: "1 Ay", subOpt3m: "3 Ay", subOpt6m: "6 Ay", subOpt12m: "12 Ay (1 İl)",
+        opt1Sig: "1 siqnal / interval", opt2Sig: "2 siqnal / interval", opt3Sig: "3 siqnal / interval", opt5Sig: "5 siqnal / interval", optNoLimit: "Məhdudiyyətsiz",
+        optFWin70: "70% (Yüksək tezlik)", optFWin75: "75% (Optimal)", optFWin80: "80% (Dəqiq)", optFWin85: "85% (Ciddi AI)",
+        optBWin70: "70% (Yüksək tezlik)", optBWin75: "75% (Optimal balans)", optBWin80: "80% (Yüksək dəqiqlik)", optBWin85: "85% (Ciddi AI filtri)",
+        assetTitle: "Skan Üçün Aktivlərin Seçimi", accForex: "💱 Populyar Valyuta Cütləri", accCrypto: "🪙 Kriptovalyuta", accStocks: "📈 Səhmlər", accCommodities: "🛢️ Xammal",
+        balStatusLbl: "💼 Balans Statusu:", assetSelectedLbl: "🎯 Seçilmiş Aktivlər:", tgNotice: "📲 Bildirişlər və siqnallar birbaşa Telegram şəxsi mesajlarınıza göndəriləcək!",
+        streakHeader: "1 gün", streakTitle: "🔥 Seriyanız", streakVal: "🔥 1 Gün", streakDesc: "Bu ay ilk aktiv gün",
+        daysShort: ['B.E', 'Ç.Ə', 'ÇƏR', 'C.A', 'CÜM', 'ŞƏN', 'BAZ'],
+        chatPlaceholder: "Sorğunuzu daxil edin...",
+        themeDark: "🌑 Qaranlıq (Dark Tech)", themeLight: "☀️ İşıqlı (Clean Light)", themeEmerald: "💚 Zümrüd (Emerald)", themeBitcoin: "🪙 Bitkoin (Bitcoin Gold)", themeCandlestick: "📈 Yapon Şamları (Candlestick)"
+      },
+      hy: {
+        navTab1: "Վիճակագրություն", navTab2: "Սկաներ", navTab3: "Սակագներ", navTab4: "AI Չատ",
+        settingsTitle: "⚙️ Կարգավորումներ", themeLabel: "🎨 Ձևավորման թեմա", langLabel: "🌐 Ինտերֆեյսի լեզու", closeBtn: "🚪 Փակել",
+        statForexBtn: "📈 Forex Վիճակագրություն", statBinaryBtn: "🎲 Օպցիոնների Վիճակագրություն",
+        winRate: "Win Rate", trades: "Գործարքներ", profitPnL: "Շահույթ PnL", tradeResultLbl: "Գործարքի արդյունք",
+        winBtn: "🟩 + Շահույթ (Win)", lossBtn: "🟥 - Վնաս (Loss)", resetStats: "🔄 Վերականգնել վիճակագրությունը",
+        calcTitle: "📐 Ռիսկի ճշգրիտ հաշվիչ", calcForexBtn: "📈 Forex Հաշվիչ", calcBinaryBtn: "🎲 Օպցիոնների հաշվիչ",
+        forexDepo: "Դեպոզիտ", forexRiskPct: "Ռիսկ ըստ գործարքի (%)", forexSL: "Stop Loss (կետեր)", forexTP: "Take Profit (կետեր)",
+        forexRiskVal: "🔴 Առավելագույն ռիսկ:", forexLotVal: "🟩 Առաջարկվող լոտի ծավալ:", forexTPVal: "📈 Ակնկալվող շահույթ (TP):", forexRRVal: "⚖️ Risk / Reward հարաբերակցություն:",
+        binDepo: "Դեպոզիտ", binStakePct: "1-ին գործարքի գումար (%)", binPayoutPct: "Բրոքերի վճարում (%)",
+        binStakeVal: "💵 1-ին գործարքի գումար:", binWinVal: "🟢 Զուտ շահույթ:", binStepVal: "🔄 Մարտինգեյլ Քայլ 1:", binStopVal: "🛑 Օրական լիմիտ (15%):",
+        scanForexDepo: "Forex Հաշվեկշիռ", scanBinDepo: "Օպցիոնների Հաշվեկշիռ", scanForexRisk: "Ռիսկ (%)", scanForexTF: "Թայմֆրեյմ", scanBinExp: "Մարման ժամանակ",
+        signalCurr: "Ազդանշանների արժույթ:", scanForexTitle: "📈 Forex AI Սկաներ", scanBinTitle: "🎲 Օպցիոնների AI Սկաներ",
+        scanMaxSignals: "📊 Առավելագույն ազդանշաններ ինտերվալում", scanInterval: "⏱️ Սկանավորման ինտերվալ", scanWinrate: "🎯 AI նվազագույն ճշգրտություն",
+        toggleForexOn: "⚡ Միացնել Forex Սկաները", toggleForexOff: "⏸️ Անջատել Forex Սկաները",
+        toggleBinOn: "🎲 Միացնել Օպցիոնների Սկաները", toggleBinOff: "⏸️ Անջատել Օպցիոնների Սկաները",
+        subHeading: "💳 Բաժանորդագրություն և մուտք", subBtnForex: "📈 Forex", subBtnBinary: "🎲 Օպցիոններ", subBtnMulti: "⚡ ՄՈՒԼՏԻ", buySubBtn: "Ձևակերպել բաժանորդագրություն",
+        trialHeading: "⏱️ Փորձնական շրջան (1 օր)", trialTimeLeft: "Մնացել է՝ <b>23 ժամ 59 րոպե</b>",
+        subOpt7d: "7 Օր", subOpt1m: "1 Ամիս", subOpt3m: "3 Ամիս", subOpt6m: "6 Ամիս", subOpt12m: "12 Ամիս (1 Տարի)",
+        opt1Sig: "1 ազդանշան / ինտերվալ", opt2Sig: "2 ազդանշան / ինտերվալ", opt3Sig: "3 ազդանշան / ինտերվալ", opt5Sig: "5 ազդանշան / ինտերվալ", optNoLimit: "Առանց սահմանափակման",
+        optFWin70: "70% (Բարձր հաճախականություն)", optFWin75: "75% (Օպտիմալ)", optFWin80: "80% (Ճշգրիտ)", optFWin85: "85% (Խիստ AI)",
+        optBWin70: "70% (Բարձր հաճախականություն)", optBWin75: "75% (Օպտիմալ հաշվեկշիռ)", optBWin80: "80% (Բարձր ճշգրտություն)", optBWin85: "85% (Խիստ AI ֆիլտր)",
+        assetTitle: "Սկանավորման ակտիվների ընտրություն", accForex: "💱 Հանրահայտ արժութային զույգեր", accCrypto: "🪙 Կրիպտոարժույթ", accStocks: "📈 Ընկերությունների բաժնետոմսեր", accCommodities: "🛢️ Հումքային ապրանքներ",
+        balStatusLbl: "💼 Հաշվեկշռի կարգավիճակ:", assetSelectedLbl: "🎯 Ընտրված ակտիվներ:", tgNotice: "📲 Ծանուցումները և ազդանշանները կուղարկվեն ուղղակիորեն Telegram-ի անձնական հաղորդագրություններով:",
+        streakHeader: "1 օր", streakTitle: "🔥 Ձեր սթրիքը", streakVal: "🔥 1 Օր", streakDesc: "Այս ամսվա առաջին ակտիվ օրը",
+        daysShort: ['ԵՐԿ', 'ԵՐՔ', 'ՉՈՐ', 'ՀՆԳ', 'ՈՒՐԲ', 'ՇԲԹ', 'ԿԻՐ'],
+        chatPlaceholder: "Մուտքագրեք ձեր հարցումը...",
+        themeDark: "🌑 Մութ (Dark Tech)", themeLight: "☀️ Լուսավոր (Clean Light)", themeEmerald: "💚 Զմրուխտե (Emerald)", themeBitcoin: "🪙 Բիթքոյն (Bitcoin Gold)", themeCandlestick: "📈 Ճապոնական մոմեր (Candlestick)"
+      }
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateStatsDisplay();
+      renderWeekChart();
+      buildMonthCalendar();
+      updateRiskCalc();
+      updateScannerState();
+    });
+
+    function switchTab(tabId, el) {
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      el.classList.add('active');
+    }
+
+    function selectLanguage(langCode, el) {
+      currentLang = langCode;
+      document.querySelectorAll('.lang-item').forEach(i => i.classList.remove('selected'));
+      if(el) el.classList.add('selected');
+
+      const dict = I18N[langCode] || I18N['en'] || I18N['ru'];
+
+      // Зафиксировано отображение Simple Trader на английском
+      document.getElementById('txtUserRole').innerText = "Simple Trader";
+
+      document.getElementById('navTab1').innerText = dict.navTab1;
+      document.getElementById('navTab2').innerText = dict.navTab2;
+      document.getElementById('navTab3').innerText = dict.navTab3;
+      document.getElementById('navTab4').innerText = dict.navTab4;
+
+      document.getElementById('txtSettingsTitle').innerText = dict.settingsTitle;
+      document.getElementById('lblThemeSelect').innerText = dict.themeLabel;
+      document.getElementById('lblLangSelect').innerText = dict.langLabel;
+      document.getElementById('btnCloseSettings').innerText = dict.closeBtn;
+      document.getElementById('btnCloseStreak').innerText = dict.closeBtn;
+
+      document.getElementById('statModeForexBtn').innerText = dict.statForexBtn;
+      document.getElementById('statModeBinaryBtn').innerText = dict.statBinaryBtn;
+
+      document.getElementById('lblWinRate').innerText = dict.winRate;
+      document.getElementById('lblTotalTrades').innerText = dict.trades;
+      document.getElementById('lblProfitPnL').innerText = dict.profitPnL;
+      document.getElementById('lblTradeResult').innerHTML = `${dict.tradeResultLbl} (<span class="tab1CurrSym">${tab1Currency === 'RUB' ? '₽' : (tab1Currency === 'EUR' ? '€' : '$')}</span>)`;
+      document.getElementById('btnWinTrade').innerText = dict.winBtn;
+      document.getElementById('btnLossTrade').innerText = dict.lossBtn;
+      document.getElementById('btnResetStats').innerText = dict.resetStats;
+
+      document.getElementById('txtCalcHeading').innerText = dict.calcTitle;
+      document.getElementById('btnCalcForexMode').innerText = dict.calcForexBtn;
+      document.getElementById('btnCalcBinaryMode').innerText = dict.calcBinaryBtn;
+
+      document.getElementById('lblForexDepo').innerHTML = `${dict.forexDepo} (<span class="tab1CurrSym">${tab1Currency === 'RUB' ? '₽' : (tab1Currency === 'EUR' ? '€' : '$')}</span>)`;
+      document.getElementById('lblBinDepo').innerHTML = `${dict.binDepo} (<span class="tab1CurrSym">${tab1Currency === 'RUB' ? '₽' : (tab1Currency === 'EUR' ? '€' : '$')}</span>)`;
+      document.getElementById('lblForexRiskPct').innerText = dict.forexRiskPct;
+      document.getElementById('lblForexSL').innerText = dict.forexSL;
+      document.getElementById('lblForexTP').innerText = dict.forexTP;
+
+      document.getElementById('lblForexRiskVal').innerText = dict.forexRiskVal;
+      document.getElementById('lblForexLot').innerText = dict.forexLotVal;
+      document.getElementById('lblForexTPVal').innerText = dict.forexTPVal;
+      document.getElementById('lblForexRR').innerText = dict.forexRRVal;
+
+      document.getElementById('lblBinStakePct').innerText = dict.binStakePct;
+      document.getElementById('lblBinPayoutPct').innerText = dict.binPayoutPct;
+      document.getElementById('lblBinStake').innerText = dict.binStakeVal;
+      document.getElementById('lblBinWinProfit').innerText = dict.binWinVal;
+      document.getElementById('lblBinStep1').innerText = dict.binStepVal;
+      document.getElementById('lblBinStopDay').innerText = dict.binStopVal;
+
+      document.getElementById('lblScanForexDepo').innerHTML = `${dict.scanForexDepo} (<span class="tab2CurrSym">${tab2Currency === 'RUB' ? '₽' : (tab2Currency === 'EUR' ? '€' : '$')}</span>)`;
+      document.getElementById('lblScanBinDepo').innerHTML = `${dict.scanBinDepo} (<span class="tab2CurrSym">${tab2Currency === 'RUB' ? '₽' : (tab2Currency === 'EUR' ? '€' : '$')}</span>)`;
+      document.getElementById('lblScanForexRisk').innerText = dict.scanForexRisk;
+      document.getElementById('lblScanForexTF').innerText = dict.scanForexTF;
+      document.getElementById('lblScanBinExp').innerText = dict.scanBinExp;
+
+      document.getElementById('lblSignalCurrency').innerText = dict.signalCurr;
+      document.getElementById('titleForexScanner').innerText = dict.scanForexTitle;
+      document.getElementById('titleBinaryScanner').innerText = dict.scanBinTitle;
+
+      document.getElementById('lblScanForexMaxSignals').innerText = dict.scanMaxSignals;
+      document.getElementById('lblScanBinMaxSignals').innerText = dict.scanMaxSignals;
+      document.getElementById('lblScanForexInterval').innerText = dict.scanInterval;
+      document.getElementById('lblScanBinInterval').innerText = dict.scanInterval;
+      document.getElementById('lblScanForexWinrate').innerText = dict.scanWinrate;
+      document.getElementById('lblScanBinWinrate').innerText = dict.scanWinrate;
+
+      document.getElementById('optFWin70').innerText = dict.optFWin70;
+      document.getElementById('optFWin75').innerText = dict.optFWin75;
+      document.getElementById('optFWin80').innerText = dict.optFWin80;
+      document.getElementById('optFWin85').innerText = dict.optFWin85;
+
+      document.getElementById('optBWin70').innerText = dict.optBWin70;
+      document.getElementById('optBWin75').innerText = dict.optBWin75;
+      document.getElementById('optBWin80').innerText = dict.optBWin80;
+      document.getElementById('optBWin85').innerText = dict.optBWin85;
+
+      document.getElementById('txtSubHeading').innerText = dict.subHeading;
+      document.getElementById('btnSubForex').innerText = dict.subBtnForex;
+      document.getElementById('btnSubBinary').innerText = dict.subBtnBinary;
+      document.getElementById('btnSubMulti').innerText = dict.subBtnMulti;
+      document.getElementById('btnBuySub').innerText = dict.buySubBtn;
+
+      document.getElementById('txtTrialPeriodHeading').innerText = dict.trialHeading;
+      document.getElementById('txtTrialTimeLeft').innerHTML = dict.trialTimeLeft;
+
+      document.getElementById('subOpt7d').innerText = dict.subOpt7d;
+      document.getElementById('subOpt1m').innerText = dict.subOpt1m;
+      document.getElementById('subOpt3m').innerText = dict.subOpt3m;
+      document.getElementById('subOpt6m').innerText = dict.subOpt6m;
+      document.getElementById('subOpt12m').innerText = dict.subOpt12m;
+
+      document.getElementById('optF1').innerText = dict.opt1Sig;
+      document.getElementById('optF2').innerText = dict.opt2Sig;
+      document.getElementById('optF3').innerText = dict.opt3Sig;
+      document.getElementById('optF5').innerText = dict.opt5Sig;
+      document.getElementById('optF0').innerText = dict.optNoLimit;
+
+      document.getElementById('optB1').innerText = dict.opt1Sig;
+      document.getElementById('optB2').innerText = dict.opt2Sig;
+      document.getElementById('optB3').innerText = dict.opt3Sig;
+      document.getElementById('optB5').innerText = dict.opt5Sig;
+      document.getElementById('optB0').innerText = dict.optNoLimit;
+
+      document.getElementById('titleAssetSelection').innerText = dict.assetTitle;
+      document.getElementById('accForexTitle').innerText = dict.accForex;
+      document.getElementById('accCryptoTitle').innerText = dict.accCrypto;
+      document.getElementById('accStocksTitle').innerText = dict.accStocks;
+      document.getElementById('accCommoditiesTitle').innerText = dict.accCommodities;
+
+      document.getElementById('lblForexBalanceStatusText').innerText = dict.balStatusLbl;
+      document.getElementById('lblBinaryBalanceStatusText').innerText = dict.balStatusLbl;
+      document.getElementById('lblForexSelectedAssetsText').innerText = dict.assetSelectedLbl;
+      document.getElementById('lblBinarySelectedAssetsText').innerText = dict.assetSelectedLbl;
+
+      document.getElementById('forexTgNotice').innerText = dict.tgNotice;
+      document.getElementById('binaryTgNotice').innerText = dict.tgNotice;
+
+      document.getElementById('streakCountHeader').innerText = dict.streakHeader;
+      document.getElementById('txtStreakTitle').innerText = dict.streakTitle;
+      document.getElementById('txtStreakValue').innerText = dict.streakVal;
+      document.getElementById('txtStreakDesc').innerText = dict.streakDesc;
+
+      document.getElementById('chatInput').placeholder = dict.chatPlaceholder;
+
+      document.getElementById('themeOptDark').innerText = dict.themeDark;
+      document.getElementById('themeOptLight').innerText = dict.themeLight;
+      document.getElementById('themeOptEmerald').innerText = dict.themeEmerald;
+      document.getElementById('themeOptBitcoin').innerText = dict.themeBitcoin;
+      document.getElementById('themeOptCandlestick').innerText = dict.themeCandlestick;
+
+      const daysArr = dict.daysShort || ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+      const dayElems = document.querySelectorAll('#calendarDayNamesHeader .cal-day-name');
+      dayElems.forEach((el, index) => {
+        if(daysArr[index]) el.innerText = daysArr[index];
+      });
+
+      if (isForexScannerActive) {
+        document.getElementById('btnToggleForexScanner').innerText = dict.toggleForexOff;
+      } else {
+        document.getElementById('btnToggleForexScanner').innerText = dict.toggleForexOn;
+      }
+
+      if (isBinaryScannerActive) {
+        document.getElementById('btnToggleBinaryScanner').innerText = dict.toggleBinOff;
+      } else {
+        document.getElementById('btnToggleBinaryScanner').innerText = dict.toggleBinOn;
+      }
+
+      switchStatSection(currentStatMode, currentStatMode === 'forex' ? document.getElementById('statModeForexBtn') : document.getElementById('statModeBinaryBtn'));
+      updateScannerState();
+    }
+
+    function updateScannerState() {
+      const dict = I18N[currentLang] || I18N['ru'];
+      const selectedAssets = document.querySelectorAll('.asset-card.selected');
+      const count = selectedAssets.length;
+      document.getElementById('lblActivePairsTotal').innerText = `${dict.assetSelectedLbl || 'Отмечено:'} ${count}`;
+      document.getElementById('forexSelectedAssetsCount').innerText = `${count}`;
+      document.getElementById('binarySelectedAssetsCount').innerText = `${count}`;
+
+      const fDepo = parseFloat(document.getElementById('forexBalanceInput').value) || 0;
+      const bDepo = parseFloat(document.getElementById('binaryBalanceInput').value) || 0;
+      const sym = tab2Currency === 'RUB' ? '₽' : (tab2Currency === 'EUR' ? '€' : '$');
+
+      document.getElementById('forexBalanceStatus').innerText = `${fDepo} ${sym} (${fDepo >= 100 ? 'OK' : 'Low'})`;
+      document.getElementById('binaryBalanceStatus').innerText = `${bDepo} ${sym} (${bDepo >= 50 ? 'OK' : 'Low'})`;
+    }
+
+    function toggleAssetCard(el) {
+      el.classList.toggle('selected');
+      updateScannerState();
+    }
+
+    function toggleForexScanner() {
+      isForexScannerActive = !isForexScannerActive;
+      const btn = document.getElementById('btnToggleForexScanner');
+      const badge = document.getElementById('forexStatusBadge');
+      const notice = document.getElementById('forexTgNotice');
+      const dict = I18N[currentLang] || I18N['ru'];
+
+      if (isForexScannerActive) {
+        btn.innerText = dict.toggleForexOff || '⏸️ Выключить Сканер Форекс';
+        btn.className = 'duo-btn duo-btn-secondary';
+        badge.innerText = 'АКТИВЕН';
+        badge.className = 'status-badge active';
+        notice.classList.add('visible');
+      } else {
+        btn.innerText = dict.toggleForexOn || '⚡ Включить Сканер Форекс';
+        btn.className = 'duo-btn';
+        badge.innerText = 'ВЫКЛ';
+        badge.className = 'status-badge inactive';
+        notice.classList.remove('visible');
+      }
+    }
+
+    function toggleBinaryScanner() {
+      isBinaryScannerActive = !isBinaryScannerActive;
+      const btn = document.getElementById('btnToggleBinaryScanner');
+      const badge = document.getElementById('binaryStatusBadge');
+      const notice = document.getElementById('binaryTgNotice');
+      const dict = I18N[currentLang] || I18N['ru'];
+
+      if (isBinaryScannerActive) {
+        btn.innerText = dict.toggleBinOff || '⏸️ Выключить Сканер Опционов';
+        btn.className = 'duo-btn duo-btn-secondary';
+        badge.innerText = 'АКТИВЕН';
+        badge.className = 'status-badge active';
+        notice.classList.add('visible');
+      } else {
+        btn.innerText = dict.toggleBinOn || '🎲 Включить Сканер Опционов';
+        btn.className = 'duo-btn duo-btn-success';
+        badge.innerText = 'ВЫКЛ';
+        badge.className = 'status-badge inactive';
+        notice.classList.remove('visible');
+      }
+    }
+
+    function toggleAccordion(accId, headerEl) {
+      const content = document.getElementById(accId);
+      const isOpen = content.classList.contains('open');
+      content.classList.toggle('open');
+      const arrowEl = headerEl.querySelector('.acc-arrow');
+      if(arrowEl) arrowEl.innerText = isOpen ? '▾' : '▴';
+    }
+
+    function switchStatSection(mode, btn) {
+      currentStatMode = mode;
+      const dict = I18N[currentLang] || I18N['ru'];
+      document.getElementById('statModeForexBtn').classList.toggle('active', mode === 'forex');
+      document.getElementById('statModeBinaryBtn').classList.toggle('active', mode === 'binary');
+
+      const isForex = mode === 'forex';
+      if (isForex) {
+        document.getElementById('tradePanelTitle').innerText = `➕ / ➖ ${dict.statForexBtn || 'Добавить сделку (Форекс)'}`;
+        document.getElementById('weekChartTitle').innerText = `📊 PnL (${dict.subBtnForex || 'Форекс'})`;
+      } else {
+        document.getElementById('tradePanelTitle').innerText = `➕ / ➖ ${dict.statBinaryBtn || 'Добавить сделку (Опционы)'}`;
+        document.getElementById('weekChartTitle').innerText = `📊 PnL (${dict.subBtnBinary || 'Опционы'})`;
+      }
+
+      updateStatsDisplay();
+      renderWeekChart();
+    }
+
+    function addTradeResult(isWin) {
+      const amtInput = parseFloat(document.getElementById('tradeAmountInput').value) || 20.0;
+      const now = new Date();
+      let dayIdx = now.getDay() - 1; 
+      if (dayIdx < 0) dayIdx = 6;
+
+      const activeStats = currentStatMode === 'forex' ? forexStats : binaryStats;
+
+      if (isWin) {
+        activeStats.wins++;
+        activeStats.netProfit += amtInput;
+        activeStats.weeklyPnL[dayIdx] += amtInput;
+      } else {
+        activeStats.losses++;
+        activeStats.netProfit -= amtInput;
+        activeStats.weeklyPnL[dayIdx] -= amtInput;
+      }
+
+      updateStatsDisplay();
+      renderWeekChart();
+    }
+
+    function updateStatsDisplay() {
+      const activeStats = currentStatMode === 'forex' ? forexStats : binaryStats;
+      const total = activeStats.wins + activeStats.losses;
+      const winrate = total > 0 ? Math.round((activeStats.wins / total) * 100) : 0;
+      const sym = tab1Currency === 'RUB' ? '₽' : (tab1Currency === 'EUR' ? '€' : '$');
+
+      document.getElementById('statWinRate').innerText = winrate + '%';
+      document.getElementById('statTotalSignals').innerText = total;
+      
+      const profitFormatted = (activeStats.netProfit >= 0 ? '+' : '') + sym + activeStats.netProfit.toFixed(2);
+      document.getElementById('statProfit').innerText = profitFormatted;
+      document.getElementById('weekProfitBadge').innerText = profitFormatted;
+    }
+
+    function renderWeekChart() {
+      const chart = document.getElementById('pnlWeekChart');
+      const activeStats = currentStatMode === 'forex' ? forexStats : binaryStats;
+      const dict = I18N[currentLang] || I18N['ru'];
+      const days = dict.daysShort || ['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'];
+      const now = new Date();
+      let currentDayIndex = now.getDay() - 1; 
+      if (currentDayIndex < 0) currentDayIndex = 6;
+
+      const maxVal = Math.max(...activeStats.weeklyPnL.map(v => Math.abs(v)), 50);
+
+      let html = '';
+      for (let i = 0; i < 7; i++) {
+        const val = activeStats.weeklyPnL[i];
+        const isToday = i === currentDayIndex;
+        const height = val !== 0 ? Math.min(Math.abs(val) / maxVal * 75 + 15, 85) : 0;
+        const barClass = val >= 0 ? 'positive' : 'negative';
+        const todayBorder = isToday ? 'today' : '';
+        const todayLabel = isToday ? 'today-label' : '';
+
+        html += `<div class="pnl-bar-wrapper"><div class="pnl-bar ${barClass} ${todayBorder}" style="height: ${height}px;"></div><span class="pnl-day ${todayLabel}">${days[i]}</span></div>`;
+      }
+      chart.innerHTML = html;
+    }
+
+    function buildMonthCalendar() {
+      const grid = document.getElementById('monthCalendarGrid');
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = now.getMonth();
+      const todayDate = now.getDate();
+
+      const firstDay = new Date(year, month, 1).getDay();
+      let startOffset = firstDay - 1;
+      if (startOffset < 0) startOffset = 6;
+
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      let html = '';
+
+      for (let i = 0; i < startOffset; i++) { html += `<div></div>`; }
+      for (let d = 1; d <= daysInMonth; d++) {
+        const isToday = d === todayDate;
+        const cls = isToday ? 'today-cell active-day' : '';
+        html += `<div class="cal-date-cell ${cls}">${d}</div>`;
+      }
+      grid.innerHTML = html;
+    }
+
+    function setTab1Currency(curr, btn) {
+      tab1Currency = curr;
+      btn.parentElement.querySelectorAll('.curr-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const sym = curr === 'RUB' ? '₽' : (curr === 'EUR' ? '€' : '$');
+      document.querySelectorAll('.tab1CurrSym').forEach(e => e.innerText = sym);
+      updateStatsDisplay();
+      updateRiskCalc();
+    }
+
+    function setTab2Currency(curr, btn) {
+      tab2Currency = curr;
+      btn.parentElement.querySelectorAll('.curr-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const sym = curr === 'RUB' ? '₽' : (curr === 'EUR' ? '€' : '$');
+      document.querySelectorAll('.tab2CurrSym').forEach(e => e.innerText = sym);
+      updateScannerState();
+    }
+
+    function resetStats() {
+      if (confirm('Сбросить статистику текущего раздела?')) {
+        if (currentStatMode === 'forex') {
+          forexStats = { wins: 0, losses: 0, netProfit: 0.0, weeklyPnL: [0, 0, 0, 0, 0, 0, 0] };
+        } else {
+          binaryStats = { wins: 0, losses: 0, netProfit: 0.0, weeklyPnL: [0, 0, 0, 0, 0, 0, 0] };
+        }
+        updateStatsDisplay();
+        renderWeekChart();
+      }
+    }
+
+    function switchCalcMode(mode, btn) {
+      btn.parentElement.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('calcForexBlock').style.display = mode === 'forex' ? 'block' : 'none';
+      document.getElementById('calcBinaryBlock').style.display = mode === 'binary' ? 'block' : 'none';
+      updateRiskCalc();
+    }
+
+    function updateRiskCalc() {
+      const sym = tab1Currency === 'RUB' ? '₽' : (tab1Currency === 'EUR' ? '€' : '$');
+      
+      const fDepo = parseFloat(document.getElementById('calcForexDepo').value) || 0;
+      const fRiskPct = parseFloat(document.getElementById('calcForexRisk').value) || 0;
+      const fSL = parseFloat(document.getElementById('calcForexSL').value) || 1;
+      const fTP = parseFloat(document.getElementById('calcForexTP').value) || 1;
+
+      const fRiskMoney = (fDepo * fRiskPct / 100);
+      const fLot = (fRiskMoney / (fSL * 10)).toFixed(2);
+      const fTPVal = (parseFloat(fLot) * fTP * 10).toFixed(2);
+      const fRR = (fTP / fSL).toFixed(1);
+
+      document.getElementById('resForexRiskVal').innerText = sym + fRiskMoney.toFixed(2);
+      document.getElementById('resForexLot').innerText = fLot + ' лота';
+      document.getElementById('resForexTPVal').innerText = sym + fTPVal;
+      document.getElementById('resForexRR').innerText = '1 : ' + fRR;
+
+      const bDepo = parseFloat(document.getElementById('calcBinDepo').value) || 0;
+      const bStakePct = parseFloat(document.getElementById('calcBinRisk').value) || 0;
+      const bPayoutPct = parseFloat(document.getElementById('calcBinPayout').value) || 85;
+
+      const bStakeMoney = (bDepo * bStakePct / 100);
+      const bWinProfit = (bStakeMoney * bPayoutPct / 100);
+      const bStep1 = bStakeMoney + (bStakeMoney / (bPayoutPct / 100));
+      const bStopDay = (bDepo * 0.15);
+
+      document.getElementById('resBinStake').innerText = sym + bStakeMoney.toFixed(2);
+      document.getElementById('resBinWinProfit').innerText = sym + bWinProfit.toFixed(2);
+      document.getElementById('resBinStep1').innerText = sym + bStep1.toFixed(2);
+      document.getElementById('resBinStopDay').innerText = sym + bStopDay.toFixed(2) + ' (15%)';
+    }
+
+    function setSubMode(mode, btn) {
+      currentSubMode = mode;
+      btn.parentElement.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updatePriceDisplay();
+    }
+
+    function updatePriceDisplay() {
+      const period = document.getElementById('subPeriodSelect').value;
+      document.getElementById('displayPrice').innerText = PRICE_MATRIX[currentSubMode][period];
+    }
+
+    function buySubscription() { alert('Переход к оплате...'); }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if(!text) return;
+      const container = document.getElementById('chatMessages');
+      container.innerHTML += `<div class="chat-msg user">${text}</div>`;
+      input.value = '';
+      setTimeout(() => {
+        container.innerHTML += `<div class="chat-msg ai">OK</div>`;
+        container.scrollTop = container.scrollHeight;
+      }, 500);
+    }
+
+    function openSettingsModal() { document.getElementById('settingsModal').classList.add('active'); }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('active'); }
+    function openStreakModal() { document.getElementById('streakModal').classList.add('active'); }
+    function closeStreakModal() { document.getElementById('streakModal').classList.remove('active'); }
+    function changeAppTheme(themeName) { document.documentElement.setAttribute('data-theme', themeName); }
+  </script>
+</body>
+</html>
